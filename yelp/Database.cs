@@ -29,7 +29,7 @@ namespace yelp
             string state, string email, string firstName, string lastName, string phone, string facebook, float rating, 
             float reviwers, string instagram, string position,
             string linkedIn, string seniority, string twitter
-                    , string departmntn)
+                    , string departmntn, string retailType)
         {
             SQLiteCommand cmd = new SQLiteCommand(query, _conn);
             OpenConnection();
@@ -52,6 +52,7 @@ namespace yelp
             cmd.Parameters.Add(new SQLiteParameter("@Seniority", seniority));
             cmd.Parameters.Add(new SQLiteParameter("@Twitter", twitter));
             cmd.Parameters.Add(new SQLiteParameter("@Departmnt", departmntn));
+            cmd.Parameters.Add(new SQLiteParameter("@RetailsType", retailType));
             cmd.ExecuteNonQuery();
             CloseConnection();
         }

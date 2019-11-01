@@ -4,6 +4,7 @@ using GooglePlacesApi.Models;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -18,8 +19,9 @@ namespace yelp
 
         public DomainFinder()
         {
+            string api_key = ConfigurationManager.AppSettings.Get("google_api");
             _settings = GoogleApiSettings.Builder
-                                            .WithApiKey("AIzaSyD6Fi3_OAslSsgOQzdJxmQS0TrP2hpdtBw")
+                                            .WithApiKey(api_key)
                                             .WithType(PlaceTypes.Establishment)
                         .WithDetailLevel(DetailLevel.Contact)
                         .Build();

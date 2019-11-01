@@ -27,5 +27,6 @@ namespace yelp
         public string Seniority { get; internal set; }
         public string Twitter { get; internal set; }
         public string Departmnt { get; internal set; }
+        public string RetailsType { get; internal set; }   
     }
 }

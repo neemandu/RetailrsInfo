@@ -1,0 +1,7 @@
+yelp/App.config
+*.sqlite3
+.vs/yelp/v16/.suo
+*.lock
+*.ide
+.vs/yelp/v16/Server/sqlite3/storage.ide-shm
+.vs/yelp/v16/Server/sqlite3/storage.ide-wal

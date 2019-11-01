@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -14,12 +15,12 @@ namespace yelp
 {
     class Program
     {
-        static readonly string _yelp_api_key = "V4BwtQMLZFc4abRkJOR6ewOwnqhBxh46NqrUNyqXblAt7Dv3rhOX8cp0WKe5yezat1kXm2g_DoCZUsLEYzvtDu6Aj6YJ6OdFuLihaccC2teJ7ANZXJ3_lRUtahoyXXYx";
-        static readonly string _hunter_api_key = "dd86ab8769c16c7850eb311fb3c2b54427007746";
+        static readonly string _hunter_api_key = ConfigurationManager.AppSettings.Get("hunter_api_key");
         static HttpClient _httpClient = new HttpClient();
         static void Main(string[] args)
         {
-            var yelpClient = new Yelp.Api.Client(_yelp_api_key);
+            string yelp_api_key = ConfigurationManager.AppSettings.Get("yelp_api_key");
+            var yelpClient = new Yelp.Api.Client(yelp_api_key);
             DomainFinder df = new DomainFinder();
             Database db = new Database();
             
@@ -33,7 +34,7 @@ namespace yelp
                 {
                     foreach (string category in categories)
                     {
-                        Console.Write($"Exploring {location} | Category: {category}");
+                        Console.WriteLine($"Exploring {location} | Category: {category}");
                         int offset = 0;
                         try
                         {
@@ -72,6 +73,7 @@ namespace yelp
                                                 string responseBody = _httpClient.GetStringAsync(url).Result;
                                                 JObject o = JObject.Parse(responseBody);
                                                 var emails = o["data"]["emails"];
+                                                var numOfEmails = int.Parse(o["meta"]["results"]?.Value<string>());
 
                                                 realdomain = string.IsNullOrEmpty(realdomain) ? o["data"]["domain"].Value<string>() : realdomain;
                                                 Console.WriteLine($"Found {emails.Count()} emails for domain: {realdomain} | company: {business.Name}");
@@ -111,8 +113,9 @@ namespace yelp
                                                     Rating = business.Rating,
                                                     Reviewers = business.ReviewCount,
                                                     Instagram = insta,
-                                                    Departmnt = null
-                                                }, db);
+                                                    Departmnt = null,
+                                                    RetailsType = numOfEmails > 8 ? "Chain" : "Store"
+                                                }, db); ;
 
                                                 foreach (var i in emails)
                                                 {
@@ -138,7 +141,8 @@ namespace yelp
                                                         Rating = business.Rating,
                                                         Reviewers = business.ReviewCount,
                                                         Instagram = insta,
-                                                        Departmnt = i["department"].ToString()
+                                                        Departmnt = i["department"].ToString(),
+                                                        RetailsType = numOfEmails > 8 ? "Chain" : "Store"
                                                     }, db);
                                                 }
                                             }
@@ -300,11 +304,11 @@ namespace yelp
 //"Glens Falls, NY",
 //"Gloversville, NY",
 //"Hornell, NY",
-"Hudson, NY",
-"Ithaca, NY",
-"Jamestown, NY",
-"Johnstown, NY",
-"Kingston, NY",
+//"Hudson, NY",
+//"Ithaca, NY",
+//"Jamestown, NY",
+//"Johnstown, NY",
+//"Kingston, NY",
 "Lackawanna, NY",
 "Little Falls, NY",
 "Lockport, NY",
@@ -314,35 +318,35 @@ namespace yelp
 "Mount Vernon, NY",
 "New Rochelle, NY",
 "New York, NY",
-"Newburgh, NY",
-"Niagara Falls, NY",
-"North Tonawanda, NY",
-"Norwich, NY",
-"Ogdensburg, NY",
-"Olean, NY",
-"Oneida, NY",
-"Oneonta, NY",
-"Oswego, NY",
-"Peekskill, NY",
-"Plattsburgh, NY",
-"Port Jervis, NY",
-"Poughkeepsie, NY",
-"Rensselaer, NY",
-"Rochester, NY",
-"Rome, NY",
-"Rye, NY",
-"Salamanca, NY",
-"Saratoga Springs, NY",
-"Schenectady, NY",
-"Sherrill, NY",
-"Syracuse, NY",
-"Tonawanda, NY",
-"Troy, NY",
-"Utica, NY",
-"Watertown, NY",
-"Watervliet, NY",
-"White Plains, NY",
-"Yonkers, NY"
+//"Newburgh, NY",
+//"Niagara Falls, NY",
+//"North Tonawanda, NY",
+//"Norwich, NY",
+//"Ogdensburg, NY",
+//"Olean, NY",
+//"Oneida, NY",
+//"Oneonta, NY",
+//"Oswego, NY",
+//"Peekskill, NY",
+//"Plattsburgh, NY",
+//"Port Jervis, NY",
+//"Poughkeepsie, NY",
+//"Rensselaer, NY",
+//"Rochester, NY",
+//"Rome, NY",
+//"Rye, NY",
+//"Salamanca, NY",
+//"Saratoga Springs, NY",
+//"Schenectady, NY",
+//"Sherrill, NY",
+//"Syracuse, NY",
+//"Tonawanda, NY",
+//"Troy, NY",
+//"Utica, NY",
+//"Watertown, NY",
+//"Watervliet, NY",
+//"White Plains, NY",
+//"Yonkers, NY"
 };
         }
 
@@ -399,11 +403,12 @@ namespace yelp
                             @LinkedIn,
                             @Seniority,
                             @Twitter,
-                            @Departmnt)";
+                            @Departmnt,
+                            @RetailsType)";
                 db.ExecuteNonQuery(query, details.Domain, details.Category, details.StoreName, details.City
                     , details.State, details.Email, details.FirstName, details.LastName, details.Phone, details.Facebook,
                     details.Rating, details.Reviewers, details.Instagram, details.Position, details.LinkedIn, details.Seniority, details.Twitter
-                    , details.Departmnt);
+                    , details.Departmnt, details.RetailsType);
             }
             catch (Exception ex)
             {
