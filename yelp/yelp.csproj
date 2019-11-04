@@ -138,6 +138,7 @@
     <Compile Include="Database.cs" />
     <Compile Include="details.cs" />
     <Compile Include="DomainFinder.cs" />
+    <Compile Include="EmailDetails.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

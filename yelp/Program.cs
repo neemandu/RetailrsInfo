@@ -13,17 +13,19 @@ using Yelp.Api.Models;
 
 namespace yelp
 {
-    class Program
+    public class Program
     {
         static readonly string _hunter_api_key = ConfigurationManager.AppSettings.Get("hunter_api_key");
         static HttpClient _httpClient = new HttpClient();
+        static int goosCtr = 0;
         static void Main(string[] args)
         {
             string yelp_api_key = ConfigurationManager.AppSettings.Get("yelp_api_key");
             var yelpClient = new Yelp.Api.Client(yelp_api_key);
-            DomainFinder df = new DomainFinder();
             Database db = new Database();
-            
+            DomainFinder df = new DomainFinder();
+            Dictionary<string, List<EmailDetails>> domainsEmails = new Dictionary<string, List<EmailDetails>>();
+
             List<string> locations = GetLocations();
             List<string> categories = GetCategories();
 
@@ -67,15 +69,28 @@ namespace yelp
                                                 realdomain = string.IsNullOrEmpty(facebook) && string.IsNullOrEmpty(insta) ? domain : "";
 
                                                 // get emails
-                                                string url = $"https://api.hunter.io/v2/domain-search?domain={realdomain}&limit=5&api_key={_hunter_api_key}";
-                                                if(string.IsNullOrEmpty(realdomain))
-                                                    url = $"https://api.hunter.io/v2/domain-search?company={business.Name}&limit=5&api_key={_hunter_api_key}";
-                                                string responseBody = _httpClient.GetStringAsync(url).Result;
-                                                JObject o = JObject.Parse(responseBody);
-                                                var emails = o["data"]["emails"];
-                                                var numOfEmails = int.Parse(o["meta"]["results"]?.Value<string>());
+                                                List<EmailDetails> emails = new List<EmailDetails>();
+                                                int numOfEmails = 0;
+                                                if (domainsEmails.ContainsKey(domain))
+                                                {
+                                                    emails = domainsEmails[domain];
+                                                }
+                                                else
+                                                {
+                                                    string url = $"https://api.hunter.io/v2/domain-search?domain={realdomain}&limit=5&api_key={_hunter_api_key}";
+                                                    if (string.IsNullOrEmpty(realdomain))
+                                                        url = $"https://api.hunter.io/v2/domain-search?company={business.Name}&limit=5&api_key={_hunter_api_key}";
+                                                    string responseBody = _httpClient.GetStringAsync(url).Result;
+                                                    JObject o = JObject.Parse(responseBody);
+                                                    var hunter_emails = o["data"]["emails"];
+                                                    emails = CreateEmailListFromHunter(hunter_emails);
+                                                    domainsEmails.Add(domain, emails);
+                                                    numOfEmails = int.Parse(o["meta"]["results"]?.Value<string>());
+                                                    realdomain = string.IsNullOrEmpty(realdomain) ? o["data"]["domain"].Value<string>() : realdomain;
+                                                }
 
-                                                realdomain = string.IsNullOrEmpty(realdomain) ? o["data"]["domain"].Value<string>() : realdomain;
+
+
                                                 Console.WriteLine($"Found {emails.Count()} emails for domain: {realdomain} | company: {business.Name}");
 
                                                 string emailAddr = "";
@@ -92,57 +107,97 @@ namespace yelp
                                                     insta = string.IsNullOrEmpty(instagram) ? insta : instagram;
                                                 }
                                                 string mail = emailAddr;
-                                                if (!string.IsNullOrEmpty(mail) && !IsEmailGood(mail))
-                                                    mail = null;
-                                                AddRecordToDb(new yelp.Details
+                                                int emailCounter = 0;
+                                                if (!string.IsNullOrEmpty(mail) && IsEmailGood(mail))
                                                 {
-                                                    Domain = domain,
-                                                    Email = mail,
-                                                    FirstName = null,
-                                                    LastName = null,
-                                                    Position = null,
-                                                    LinkedIn = linkedinadd,
-                                                    Twitter = twitt,
-                                                    Seniority = null,
-                                                    City = business.Location.City,
-                                                    State = business.Location.State,
-                                                    Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
-                                                    StoreName = business.Name,
-                                                    Phone = business.Phone,
-                                                    Facebook = facebook,
-                                                    Rating = business.Rating,
-                                                    Reviewers = business.ReviewCount,
-                                                    Instagram = insta,
-                                                    Departmnt = null,
-                                                    RetailsType = numOfEmails > 8 ? "Chain" : "Store"
-                                                }, db); ;
-
-                                                foreach (var i in emails)
-                                                {
-                                                    mail = i["value"].ToString();
-                                                    if (!IsEmailGood(mail))
-                                                        mail = null;
+                                                    emailCounter++;
                                                     AddRecordToDb(new yelp.Details
                                                     {
                                                         Domain = domain,
                                                         Email = mail,
-                                                        FirstName = i["first_name"].ToString(),
-                                                        LastName = i["last_name"].ToString(),
-                                                        Position = i["position"].ToString(),
-                                                        LinkedIn = i["linkedin"].ToString(),
-                                                        Twitter = i["twitter"].ToString(),
-                                                        Seniority = i["seniority"].ToString(),
+                                                        FirstName = null,
+                                                        LastName = null,
+                                                        Position = null,
+                                                        LinkedIn = linkedinadd,
+                                                        Twitter = twitt,
+                                                        Seniority = null,
                                                         City = business.Location.City,
                                                         State = business.Location.State,
                                                         Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
                                                         StoreName = business.Name,
-                                                        Phone = string.IsNullOrEmpty(business.Phone) ? i["phone_number"].ToString() : business.Phone,
+                                                        Phone = business.Phone,
                                                         Facebook = facebook,
                                                         Rating = business.Rating,
                                                         Reviewers = business.ReviewCount,
                                                         Instagram = insta,
-                                                        Departmnt = i["department"].ToString(),
-                                                        RetailsType = numOfEmails > 8 ? "Chain" : "Store"
+                                                        Departmnt = null,
+                                                        RetailsType = numOfEmails > 8 ? "Chain" : "Store",
+                                                        Address1 = business.Location.Address1,
+                                                        Address2 = business.Location.Address2,
+                                                        ZipCode = business.Location.ZipCode
+                                                    }, db);
+                                                }
+
+                                                foreach (var i in emails)
+                                                {
+                                                    mail = i.Email; 
+                                                    if (IsEmailGood(mail))
+                                                    {
+                                                        emailCounter++;
+                                                        AddRecordToDb(new yelp.Details
+                                                        {
+                                                            Domain = domain,
+                                                            Email = mail,
+                                                            FirstName = i.FirstName,
+                                                            LastName = i.LastName,
+                                                            Position = i.Position,
+                                                            LinkedIn = i.LinkedIn,
+                                                            Twitter = i.Twitter,
+                                                            Seniority = i.Seniority,
+                                                            City = business.Location.City,
+                                                            State = business.Location.State,
+                                                            Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
+                                                            StoreName = business.Name,
+                                                            Phone = string.IsNullOrEmpty(business.Phone) ? i.Phone : business.Phone,
+                                                            Facebook = facebook,
+                                                            Rating = business.Rating,
+                                                            Reviewers = business.ReviewCount,
+                                                            Instagram = insta,
+                                                            Departmnt = i.Departmnt,
+                                                            RetailsType = numOfEmails > 8 ? "Chain" : "Store",
+                                                            Address1 = business.Location.Address1,
+                                                            Address2 = business.Location.Address2,
+                                                            ZipCode = business.Location.ZipCode
+                                                        }, db);
+                                                    }
+                                                }
+
+                                                if (emailCounter == 0)
+                                                {
+                                                    AddRecordToDb(new yelp.Details
+                                                    {
+                                                        Domain = domain,
+                                                        Email = null,
+                                                        FirstName = null,
+                                                        LastName = null,
+                                                        Position = null,
+                                                        LinkedIn = linkedinadd,
+                                                        Twitter = twitt,
+                                                        Seniority = null,
+                                                        City = business.Location.City,
+                                                        State = business.Location.State,
+                                                        Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
+                                                        StoreName = business.Name,
+                                                        Phone = business.Phone,
+                                                        Facebook = facebook,
+                                                        Rating = business.Rating,
+                                                        Reviewers = business.ReviewCount,
+                                                        Instagram = insta,
+                                                        Departmnt = null,
+                                                        RetailsType = numOfEmails > 8 ? "Chain" : "Store",
+                                                        Address1 = business.Location.Address1,
+                                                        Address2 = business.Location.Address2,
+                                                        ZipCode = business.Location.ZipCode
                                                     }, db);
                                                 }
                                             }
@@ -168,6 +223,40 @@ namespace yelp
             }
         }
 
+        private static List<EmailDetails> CreateEmailListFromHunter(JToken hunter_emails)
+        {
+            List<EmailDetails> ret = new List<EmailDetails>();
+            foreach (var email in hunter_emails)
+            {
+                ret.Add(new EmailDetails
+                {
+                    Email = email["value"].ToString(),
+                    FirstName = email["first_name"].ToString(),
+                    LastName = email["last_name"].ToString(),
+                    Departmnt = email["department"].ToString(),
+                    LinkedIn = email["linkedin"].ToString(),
+                    Phone = email["phone_number"].ToString(),
+                    Position = email["position"].ToString(),
+                    Seniority = email["seniority"].ToString(),
+                    Twitter = email["twitter"].ToString()
+                });
+            }
+
+            return ret;
+        }
+
+
+        public static void AddSocial(string domain)
+        {
+            HttpClient _httpClient = new HttpClient();
+            Program.GetSocialFromWebSite(domain, out string fb, out string instagram, out string email,
+                                                        out string linkedin, out string twitter, _httpClient);
+            if (!string.IsNullOrEmpty(email))
+                goosCtr++;
+            Database d = new Database();
+            d.UpdateSocial(domain, fb, instagram, email, linkedin, twitter);
+        }
+
         private static bool IsEmailGood(string mail)
         {
             string url = $"https://api.hunter.io/v2/email-verifier?email={mail}&api_key={_hunter_api_key}";
@@ -177,7 +266,7 @@ namespace yelp
             return result == "deliverable";
         }
 
-        private static void GetSocialFromWebSite(string domain, out string fb, out string instagram,
+        public static void GetSocialFromWebSite(string domain, out string fb, out string instagram,
             out string email, out string linkedin, out string twitter, HttpClient _hunterClient)
         {
             fb = "";
@@ -186,56 +275,60 @@ namespace yelp
             linkedin = "";
             twitter = "";
             string responseBody = "";
-            if (domain.Contains("http") || domain.Contains("https") || domain.Contains("www"))
+            try
             {
-                responseBody = _httpClient.GetStringAsync(domain).Result;
-                if (!string.IsNullOrEmpty(responseBody))
+                if (domain.Contains("http") || domain.Contains("https") || domain.Contains("www"))
                 {
+                    responseBody = _httpClient.GetStringAsync(domain).Result;
+                    if (!string.IsNullOrEmpty(responseBody))
+                    {
 
-                    string fbregex = @"(?:(?:http|https):\/\/)?(?:www.)?facebook.com\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[?\w\-]*\/)?(?:profile.php\?id=(?=\d.*))?([\w\-]*)?";
-                    fb = GetMatched(responseBody, fbregex);
+                        string fbregex = @"(?:(?:http|https):\/\/)?(?:www.)?facebook.com\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[?\w\-]*\/)?(?:profile.php\?id=(?=\d.*))?([\w\-]*)?";
+                        fb = GetMatched(responseBody, fbregex);
 
-                    string instregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:instagram.com|instagr.am)\/([A-Za-z0-9-_\.]+)";
-                    instagram = GetMatched(responseBody, instregex);
+                        string instregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:instagram.com|instagr.am)\/([A-Za-z0-9-_\.]+)";
+                        instagram = GetMatched(responseBody, instregex);
 
-                    string emailregex = @"/^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$/";
-                    email = GetMatched(responseBody, emailregex);
+                        string emailregex = @"([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})";
+                        email = GetMatched(responseBody, emailregex);
 
-                    string linkedinregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:linkedin.com)(\/([A-Za-z0-9-_\.]+))+";
-                    linkedin = GetMatched(responseBody, linkedinregex);
+                        string linkedinregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:linkedin.com)(\/([A-Za-z0-9-_\.]+))+";
+                        linkedin = GetMatched(responseBody, linkedinregex);
 
-                    string twitterregex = @"/http(?:s)?:\/\/(?:www\.)?twitter\.com\/([a-zA-Z0-9_]+)/";
-                    twitter = GetMatched(responseBody, twitterregex);
+                        string twitterregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:twitter.com|instagr.am)\/([A-Za-z0-9-_\.]+)";
+                        twitter = GetMatched(responseBody, twitterregex);
+                    }
+                }
+                else
+                {
+                    responseBody = GetSiteContent(domain, "http://");
+                    if (string.IsNullOrEmpty(responseBody))
+                        responseBody = GetSiteContent(domain, "https://");
+                    if (string.IsNullOrEmpty(responseBody))
+                        responseBody = GetSiteContent(domain, "http://www.");
+                    if (string.IsNullOrEmpty(responseBody))
+                        responseBody = GetSiteContent(domain, "https://www.");
+                    if (!string.IsNullOrEmpty(responseBody))
+                    {
+
+                        string fbregex = @"(?:(?:http|https):\/\/)?(?:www.)?facebook.com\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[?\w\-]*\/)?(?:profile.php\?id=(?=\d.*))?([\w\-]*)?";
+                        fb = GetMatched(responseBody, fbregex);
+
+                        string instregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:instagram.com|instagr.am)\/([A-Za-z0-9-_\.]+)";
+                        instagram = GetMatched(responseBody, instregex);
+
+                        string emailregex = @"/^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$/";
+                        email = GetMatched(responseBody, emailregex);
+
+                        string linkedinregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:linkedin.com)(\/([A-Za-z0-9-_\.]+))+";
+                        linkedin = GetMatched(responseBody, linkedinregex);
+
+                        string twitterregex = @"/http(?:s)?:\/\/(?:www\.)?twitter\.com\/([a-zA-Z0-9_]+)/";
+                        twitter = GetMatched(responseBody, twitterregex);
+                    }
                 }
             }
-            else
-            {
-                responseBody = GetSiteContent(domain, "http://");
-                if(string.IsNullOrEmpty(responseBody))
-                    responseBody = GetSiteContent(domain, "https://");
-                if (string.IsNullOrEmpty(responseBody))
-                    responseBody = GetSiteContent(domain, "http://www.");
-                if (string.IsNullOrEmpty(responseBody))
-                    responseBody = GetSiteContent(domain, "https://www.");
-                if (!string.IsNullOrEmpty(responseBody))
-                {
-                    
-                    string fbregex = @"(?:(?:http|https):\/\/)?(?:www.)?facebook.com\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[?\w\-]*\/)?(?:profile.php\?id=(?=\d.*))?([\w\-]*)?";
-                    fb = GetMatched(responseBody, fbregex);
-
-                    string instregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:instagram.com|instagr.am)\/([A-Za-z0-9-_\.]+)";
-                    instagram = GetMatched(responseBody, instregex);
-
-                    string emailregex = @"/^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$/";
-                    email = GetMatched(responseBody, emailregex);
-
-                    string linkedinregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:linkedin.com)(\/([A-Za-z0-9-_\.]+))+";
-                    linkedin = GetMatched(responseBody, linkedinregex);
-
-                    string twitterregex = @"/http(?:s)?:\/\/(?:www\.)?twitter\.com\/([a-zA-Z0-9_]+)/";
-                    twitter = GetMatched(responseBody, twitterregex);
-                }
-            }
+            catch (Exception e) { }
         }
 
         private static string GetSiteContent(string domain, string val)
@@ -250,7 +343,7 @@ namespace yelp
                 }
                 catch (Exception ex)
                 {
-                    return  "";
+                    return "";
                 }
             }
             else
@@ -262,7 +355,7 @@ namespace yelp
                 }
                 catch (Exception ex)
                 {
-                    return  "";
+                    return "";
                 }
             }
         }
@@ -309,44 +402,44 @@ namespace yelp
 //"Jamestown, NY",
 //"Johnstown, NY",
 //"Kingston, NY",
-"Lackawanna, NY",
-"Little Falls, NY",
-"Lockport, NY",
-"Long Beach, NY",
-"Mechanicville, NY",
-"Middletown, NY",
-"Mount Vernon, NY",
-"New Rochelle, NY",
-"New York, NY",
-//"Newburgh, NY",
-//"Niagara Falls, NY",
-//"North Tonawanda, NY",
-//"Norwich, NY",
-//"Ogdensburg, NY",
-//"Olean, NY",
-//"Oneida, NY",
-//"Oneonta, NY",
-//"Oswego, NY",
-//"Peekskill, NY",
-//"Plattsburgh, NY",
-//"Port Jervis, NY",
-//"Poughkeepsie, NY",
-//"Rensselaer, NY",
-//"Rochester, NY",
-//"Rome, NY",
-//"Rye, NY",
-//"Salamanca, NY",
-//"Saratoga Springs, NY",
-//"Schenectady, NY",
-//"Sherrill, NY",
-//"Syracuse, NY",
-//"Tonawanda, NY",
-//"Troy, NY",
-//"Utica, NY",
-//"Watertown, NY",
-//"Watervliet, NY",
-//"White Plains, NY",
-//"Yonkers, NY"
+//"Lackawanna, NY",
+//"Little Falls, NY",
+//"Lockport, NY",
+//"Long Beach, NY",
+//"Mechanicville, NY",
+//"Middletown, NY",
+//"Mount Vernon, NY",
+//"New Rochelle, NY",
+//"New York, NY",
+"Newburgh, NY",
+"Niagara Falls, NY",
+"North Tonawanda, NY",
+"Norwich, NY",
+"Ogdensburg, NY",
+"Olean, NY",
+"Oneida, NY",
+"Oneonta, NY",
+"Oswego, NY",
+"Peekskill, NY",
+"Plattsburgh, NY",
+"Port Jervis, NY",
+"Poughkeepsie, NY",
+"Rensselaer, NY",
+"Rochester, NY",
+"Rome, NY",
+"Rye, NY",
+"Salamanca, NY",
+"Saratoga Springs, NY",
+"Schenectady, NY",
+"Sherrill, NY",
+"Syracuse, NY",
+"Tonawanda, NY",
+"Troy, NY",
+"Utica, NY",
+"Watertown, NY",
+"Watervliet, NY",
+"White Plains, NY",
+"Yonkers, NY"
 };
         }
 
@@ -380,11 +473,11 @@ namespace yelp
         {
             try
             {
-//                string update = $@"update Stores
-//set Domain = @Domain,
-//Email = @Email,FirstName = @FirstName, LastName = @LastName, Facebook = @Facebook,
-//Rating = @Rating, Reviewers = @Reviewers, Instagram = @Instagram
-//where StoreName = @StoreName and City = @City";
+                //                string update = $@"update Stores
+                //set Domain = @Domain,
+                //Email = @Email,FirstName = @FirstName, LastName = @LastName, Facebook = @Facebook,
+                //Rating = @Rating, Reviewers = @Reviewers, Instagram = @Instagram
+                //where StoreName = @StoreName and City = @City";
                 string query = $@"INSERT INTO Stores 
                             VALUES (@Domain, 
                             @Category, 
@@ -404,11 +497,15 @@ namespace yelp
                             @Seniority,
                             @Twitter,
                             @Departmnt,
-                            @RetailsType)";
+                            @RetailsType,
+                            @ZipCode,
+                            @Address1,
+                            @Address2
+                            )";
                 db.ExecuteNonQuery(query, details.Domain, details.Category, details.StoreName, details.City
                     , details.State, details.Email, details.FirstName, details.LastName, details.Phone, details.Facebook,
                     details.Rating, details.Reviewers, details.Instagram, details.Position, details.LinkedIn, details.Seniority, details.Twitter
-                    , details.Departmnt, details.RetailsType);
+                    , details.Departmnt, details.RetailsType, details.Address1, details.Address2, details.ZipCode);
             }
             catch (Exception ex)
             {

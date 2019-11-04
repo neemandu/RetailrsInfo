@@ -8,6 +8,7 @@ using System.Configuration;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace yelp
@@ -57,9 +58,12 @@ namespace yelp
 
         internal List<string> GetAllWebSites(string searchTerm, HttpClient httpClient)
         {
+            Dictionary<string, bool> domainsDict = new Dictionary<string, bool>();
             try
             {
                 //           searchTerm = "Alicia's Jewelers Bayside NY";
+          
+                
                 List<string> placeIds = GetPlaceIds(searchTerm);
                 List<string> domains = new List<string>();
                 foreach(var placeId in placeIds)
@@ -83,7 +87,11 @@ namespace yelp
                                 responseBody = httpClient.GetStringAsync(e?.ToString()).Result;
                                 if (!string.IsNullOrEmpty(responseBody))
                                 {
-                                    domains.Add(e.ToString());
+                                    string dom = GetDomainFromUrl(e.ToString());
+                                    if (!domainsDict.ContainsKey(dom))
+                                    {
+                                        domainsDict.Add(dom, true);
+                                    }
                                 }
                             }
                             catch(Exception ex) { }
@@ -91,9 +99,21 @@ namespace yelp
                     }
                 }
                 
-                return domains;
+                return domainsDict.Keys.ToList();
             }
             catch (Exception x) { return new List<string>(); }
+        }
+
+        private string GetDomainFromUrl(string url)
+        {
+            string regex = @"(?:\/\/|[^\/]+)*";
+
+            Match m = Regex.Match(url, regex, RegexOptions.IgnoreCase);
+            if (m.Success && ((m.Groups?.Count ?? 0) > 0))
+            {
+                return m.Groups[0].Value.Replace("http://", "").Replace("https://", "").Replace("www.", "");
+            }
+            return null;
         }
     }
 }
