@@ -4,9 +4,12 @@ using GooglePlacesApi.Models;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace yelp
@@ -18,8 +21,9 @@ namespace yelp
 
         public DomainFinder()
         {
+            string api_key = ConfigurationManager.AppSettings.Get("google_api");
             _settings = GoogleApiSettings.Builder
-                                            .WithApiKey("AIzaSyD6Fi3_OAslSsgOQzdJxmQS0TrP2hpdtBw")
+                                            .WithApiKey(api_key)
                                             .WithType(PlaceTypes.Establishment)
                         .WithDetailLevel(DetailLevel.Contact)
                         .Build();
@@ -55,9 +59,12 @@ namespace yelp
 
         internal List<string> GetAllWebSites(string searchTerm, HttpClient httpClient)
         {
+            Dictionary<string, bool> domainsDict = new Dictionary<string, bool>();
             try
             {
                 //           searchTerm = "Alicia's Jewelers Bayside NY";
+          
+                
                 List<string> placeIds = GetPlaceIds(searchTerm);
                 List<string> domains = new List<string>();
                 foreach(var placeId in placeIds)
@@ -78,20 +85,40 @@ namespace yelp
                         {
                             try
                             {
-                                responseBody = httpClient.GetStringAsync(e?.ToString()).Result;
+                                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
+                                responseBody = httpClient.GetStringAsync(e?.ToString()).GetAwaiter().GetResult();
                                 if (!string.IsNullOrEmpty(responseBody))
                                 {
-                                    domains.Add(e.ToString());
+                                    string dom = GetDomainFromUrl(e.ToString());
+                                    if (!domainsDict.ContainsKey(dom))
+                                    {
+                                        domainsDict.Add(dom, true);
+                                    }
                                 }
                             }
-                            catch(Exception ex) { }
+                            catch(Exception ex) 
+                            {
+
+                            }
                         }
                     }
                 }
                 
-                return domains;
+                return domainsDict.Keys.ToList();
             }
             catch (Exception x) { return new List<string>(); }
+        }
+
+        private string GetDomainFromUrl(string url)
+        {
+            string regex = @"(?:\/\/|[^\/]+)*";
+
+            Match m = Regex.Match(url, regex, RegexOptions.IgnoreCase);
+            if (m.Success && ((m.Groups?.Count ?? 0) > 0))
+            {
+                return m.Groups[0].Value.Replace("http://", "").Replace("https://", "").Replace("www.", "");
+            }
+            return null;
         }
     }
 }
