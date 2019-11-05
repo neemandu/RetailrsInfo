@@ -170,7 +170,7 @@ namespace yelp
             string responseBody = _httpClient.GetStringAsync(url).Result;
             JObject o = JObject.Parse(responseBody);
             var result = o["data"]["result"].ToString();
-            return result == "deliverable";
+            return result != "undeliverable";
         }
 
         private static void GetSocialFromWebSite(string domain, out string fb, out string instagram,
