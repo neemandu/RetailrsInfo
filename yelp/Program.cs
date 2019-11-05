@@ -76,20 +76,20 @@ namespace yelp
                                                 realdomain = string.IsNullOrEmpty(realdomain) ? o["data"]["domain"].Value<string>() : realdomain;
                                                 Console.WriteLine($"Found {emails.Count()} emails for domain: {realdomain} | company: {business.Name}");
 
-                                                string emailAddr = "";
+                                                List<string> emailAddrs = new List<string>();
                                                 string linkedinadd = "";
                                                 string twitt = "";
                                                 if (!string.IsNullOrEmpty(realdomain))
                                                 {
-                                                    GetSocialFromWebSite(realdomain, out string fb, out string instagram, out string email,
+                                                    GetSocialFromWebSite(realdomain, out string fb, out string instagram, out List<string> emailsList,
                                                         out string linkedin, out string twitter, _httpClient);
-                                                    emailAddr = email;
+                                                    emailAddrs = emailsList;
                                                     linkedinadd = linkedin;
                                                     twitt = twitter;
                                                     facebook = string.IsNullOrEmpty(fb) ? facebook : fb;
                                                     insta = string.IsNullOrEmpty(instagram) ? insta : instagram;
                                                 }
-                                                string mail = emailAddr;
+                                                string mail = emailAddrs;
                                                 if (!string.IsNullOrEmpty(mail) && !IsEmailGood(mail))
                                                     mail = null;
                                                 AddRecordToDb(new yelp.Details
@@ -166,6 +166,13 @@ namespace yelp
 
         private static bool IsEmailGood(string mail)
         {
+            List<string> badEmailFormats = GetBadEmailFormats();
+            foreach(string format in badEmailFormats)
+            {
+                if (mail.Contains(format))
+                    return false;
+            }
+
             string url = $"https://api.hunter.io/v2/email-verifier?email={mail}&api_key={_hunter_api_key}";
             string responseBody = _httpClient.GetStringAsync(url).Result;
             JObject o = JObject.Parse(responseBody);
@@ -173,12 +180,22 @@ namespace yelp
             return result != "undeliverable";
         }
 
+        private static List<string> GetBadEmailFormats()
+        {
+            return new List<string>
+            {
+                "example",
+                "wixpress",
+                @"//"
+            };
+        }
+
         private static void GetSocialFromWebSite(string domain, out string fb, out string instagram,
-            out string email, out string linkedin, out string twitter, HttpClient _hunterClient)
+            out List<string> emailsList, out string linkedin, out string twitter, HttpClient _hunterClient)
         {
             fb = "";
             instagram = "";
-            email = "";
+            emailsList = new List<string>();
             linkedin = "";
             twitter = "";
             string responseBody = "";
@@ -195,7 +212,7 @@ namespace yelp
                     instagram = GetMatched(responseBody, instregex);
 
                     string emailregex = @"/^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$/";
-                    email = GetMatched(responseBody, emailregex);
+                    emailsList = GetMatchedList(responseBody, emailregex);
 
                     string linkedinregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:linkedin.com)(\/([A-Za-z0-9-_\.]+))+";
                     linkedin = GetMatched(responseBody, linkedinregex);
@@ -223,7 +240,7 @@ namespace yelp
                     instagram = GetMatched(responseBody, instregex);
 
                     string emailregex = @"/^([a-z0-9_\.-]+)@([\da-z\.-]+)\.([a-z\.]{2,6})$/";
-                    email = GetMatched(responseBody, emailregex);
+                    emailsList = GetMatchedList(responseBody, emailregex);
 
                     string linkedinregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:linkedin.com)(\/([A-Za-z0-9-_\.]+))+";
                     linkedin = GetMatched(responseBody, linkedinregex);
@@ -271,6 +288,19 @@ namespace yelp
                 return m.Groups[0].Value;
             }
             return null;
+        }
+
+        private static List<string> GetMatchedList(string responseBody, string regex)
+        {
+            Dictionary<string, bool> retList = new Dictionary<string, bool>();
+            var matches = Regex.Matches(responseBody, regex, RegexOptions.IgnoreCase);
+            foreach (var match in matches)
+            {
+                string key = match.ToString();
+                if (!retList.ContainsKey(key))
+                    retList.Add(key, true);
+            }
+            return retList.Keys.ToList();
         }
 
         private static List<string> GetCategories()
