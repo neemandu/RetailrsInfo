@@ -5,3 +5,5 @@ yelp/App.config
 *.ide
 .vs/yelp/v16/Server/sqlite3/storage.ide-shm
 .vs/yelp/v16/Server/sqlite3/storage.ide-wal
+yelp/bin/Debug/yelp.exe
+yelp/bin/Debug/yelp.exe

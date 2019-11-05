@@ -31,3 +31,7 @@ C:\Projects\RetailrsInfo\Tests\bin\Debug\System.Data.SQLite.EF6.dll
 C:\Projects\RetailrsInfo\Tests\bin\Debug\System.Data.SQLite.Linq.dll
 C:\Projects\RetailrsInfo\Tests\bin\Debug\EntityFramework.xml
 C:\Projects\RetailrsInfo\Tests\bin\Debug\EntityFramework.SqlServer.xml
+C:\Users\dneeman\source\repos\yelp\Tests\obj\Debug\Tests.csprojAssemblyReference.cache
+C:\Users\dneeman\source\repos\yelp\Tests\obj\Debug\Tests.csproj.CoreCompileInputs.cache
+C:\Users\dneeman\source\repos\yelp\Tests\obj\Debug\Tests.dll
+C:\Users\dneeman\source\repos\yelp\Tests\obj\Debug\Tests.pdb

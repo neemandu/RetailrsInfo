@@ -106,49 +106,24 @@ namespace yelp
                                                     facebook = string.IsNullOrEmpty(fb) ? facebook : fb;
                                                     insta = string.IsNullOrEmpty(instagram) ? insta : instagram;
                                                 }
-                                                string mail = emailAddrs;
-                                                if (!string.IsNullOrEmpty(mail) && !IsEmailGood(mail))
-                                                    mail = null;
-                                                AddRecordToDb(new yelp.Details
+                                                foreach (string m in emailAddrs)
                                                 {
-                                                    emailCounter++;
-                                                    AddRecordToDb(new yelp.Details
+                                                    emails.Add(new EmailDetails
                                                     {
-                                                        Domain = domain,
-                                                        Email = mail,
-                                                        FirstName = null,
-                                                        LastName = null,
-                                                        Position = null,
-                                                        LinkedIn = linkedinadd,
-                                                        Twitter = twitt,
-                                                        Seniority = null,
-                                                        City = business.Location.City,
-                                                        State = business.Location.State,
-                                                        Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
-                                                        StoreName = business.Name,
-                                                        Phone = business.Phone,
-                                                        Facebook = facebook,
-                                                        Rating = business.Rating,
-                                                        Reviewers = business.ReviewCount,
-                                                        Instagram = insta,
-                                                        Departmnt = null,
-                                                        RetailsType = numOfEmails > 8 ? "Chain" : "Store",
-                                                        Address1 = business.Location.Address1,
-                                                        Address2 = business.Location.Address2,
-                                                        ZipCode = business.Location.ZipCode
-                                                    }, db);
+                                                        Email = m
+                                                    });
                                                 }
 
+                                                int emailCounter = 0;
                                                 foreach (var i in emails)
                                                 {
-                                                    mail = i.Email; 
-                                                    if (IsEmailGood(mail))
+                                                    if (IsEmailGood(i.Email))
                                                     {
                                                         emailCounter++;
                                                         AddRecordToDb(new yelp.Details
                                                         {
                                                             Domain = domain,
-                                                            Email = mail,
+                                                            Email = i.Email,
                                                             FirstName = i.FirstName,
                                                             LastName = i.LastName,
                                                             Position = i.Position,
@@ -246,22 +221,10 @@ namespace yelp
             return ret;
         }
 
-
-        public static void AddSocial(string domain)
-        {
-            HttpClient _httpClient = new HttpClient();
-            Program.GetSocialFromWebSite(domain, out string fb, out string instagram, out string email,
-                                                        out string linkedin, out string twitter, _httpClient);
-            if (!string.IsNullOrEmpty(email))
-                goosCtr++;
-            Database d = new Database();
-            d.UpdateSocial(domain, fb, instagram, email, linkedin, twitter);
-        }
-
         private static bool IsEmailGood(string mail)
         {
             List<string> badEmailFormats = GetBadEmailFormats();
-            foreach(string format in badEmailFormats)
+            foreach (string format in badEmailFormats)
             {
                 if (mail.Contains(format))
                     return false;
