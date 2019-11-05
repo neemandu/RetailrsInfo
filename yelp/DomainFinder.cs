@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -84,7 +85,8 @@ namespace yelp
                         {
                             try
                             {
-                                responseBody = httpClient.GetStringAsync(e?.ToString()).Result;
+                                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
+                                responseBody = httpClient.GetStringAsync(e?.ToString()).GetAwaiter().GetResult();
                                 if (!string.IsNullOrEmpty(responseBody))
                                 {
                                     string dom = GetDomainFromUrl(e.ToString());
@@ -94,7 +96,10 @@ namespace yelp
                                     }
                                 }
                             }
-                            catch(Exception ex) { }
+                            catch(Exception ex) 
+                            {
+
+                            }
                         }
                     }
                 }

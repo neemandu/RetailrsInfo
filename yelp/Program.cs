@@ -372,7 +372,8 @@ namespace yelp
 
         private static List<string> GetCategories()
         {
-            return new List<string> { "watches", "giftshops" };
+            //return new List<string> { "watches", "giftshops" };
+            return new List<string> { "officeequipment", "bookstores" };
         }
 
         private static List<string> GetLocations()
@@ -410,36 +411,36 @@ namespace yelp
 //"Middletown, NY",
 //"Mount Vernon, NY",
 //"New Rochelle, NY",
-//"New York, NY",
-"Newburgh, NY",
-"Niagara Falls, NY",
-"North Tonawanda, NY",
-"Norwich, NY",
-"Ogdensburg, NY",
-"Olean, NY",
-"Oneida, NY",
-"Oneonta, NY",
-"Oswego, NY",
-"Peekskill, NY",
-"Plattsburgh, NY",
-"Port Jervis, NY",
-"Poughkeepsie, NY",
-"Rensselaer, NY",
-"Rochester, NY",
-"Rome, NY",
-"Rye, NY",
-"Salamanca, NY",
-"Saratoga Springs, NY",
-"Schenectady, NY",
-"Sherrill, NY",
-"Syracuse, NY",
-"Tonawanda, NY",
-"Troy, NY",
-"Utica, NY",
-"Watertown, NY",
-"Watervliet, NY",
-"White Plains, NY",
-"Yonkers, NY"
+"New York, NY"
+//"Newburgh, NY",
+//"Niagara Falls, NY",
+//"North Tonawanda, NY",
+//"Norwich, NY",
+//"Ogdensburg, NY",
+//"Olean, NY",
+//"Oneida, NY",
+//"Oneonta, NY",
+//"Oswego, NY",
+//"Peekskill, NY",
+//"Plattsburgh, NY",
+//"Port Jervis, NY",
+//"Poughkeepsie, NY",
+//"Rensselaer, NY",
+//"Rochester, NY",
+//"Rome, NY",
+//"Rye, NY",
+//"Salamanca, NY",
+//"Saratoga Springs, NY",
+//"Schenectady, NY",
+//"Sherrill, NY",
+//"Syracuse, NY",
+//"Tonawanda, NY",
+//"Troy, NY",
+//"Utica, NY",
+//"Watertown, NY",
+//"Watervliet, NY",
+//"White Plains, NY",
+//"Yonkers, NY"
 };
         }
 
