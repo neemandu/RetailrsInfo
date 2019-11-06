@@ -26,6 +26,7 @@ namespace yelp
             DomainFinder df = new DomainFinder();
             Dictionary<string, List<EmailDetails>> domainsEmails = new Dictionary<string, List<EmailDetails>>();
 
+
             List<string> locations = GetLocations();
             List<string> categories = GetCategories();
 
