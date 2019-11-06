@@ -108,10 +108,13 @@ namespace yelp
                                                 }
                                                 foreach (string m in emailAddrs)
                                                 {
-                                                    emails.Add(new EmailDetails
+                                                    if (!emails.Any(mai => mai.Email == m))
                                                     {
-                                                        Email = m
-                                                    });
+                                                        emails.Add(new EmailDetails
+                                                        {
+                                                            Email = m
+                                                        });
+                                                    }
                                                 }
 
                                                 int emailCounter = 0;
@@ -359,7 +362,7 @@ namespace yelp
             {
                 string key = match.ToString();
                 if (!retList.ContainsKey(key))
-                    retList.Add(key, true);
+                    retList.Add(key, true);  
             }
             return retList.Keys.ToList();
         }
@@ -367,74 +370,73 @@ namespace yelp
         private static List<string> GetCategories()
         {
             //return new List<string> { "watches", "giftshops" };
-            return new List<string> { "officeequipment", "bookstores" };
+            return new List<string> { "officeequipment", "bookstores", "gifts" };
         }
 
         private static List<string> GetLocations()
         {
-            // return new List<string> { "Albany, NY" };
-            return new List<string>{ 
-//"Amsterdam, NY",
-//"Auburn, NY",
-//"Batavia, NY",
-//"Beacon, NY",
-//"Binghamton, NY",
-//"Buffalo, NY",
-//"Canandaigua, NY",
-//"Cohoes, NY",
-//"Corning, NY",
-//"Cortland, NY",
-//"Dunkirk, NY",
-//"Elmira, NY",
-//"Fulton, NY",
-//"Geneva, NY",
-//"Glen Cove, NY",
-//"Glens Falls, NY",
-//"Gloversville, NY",
-//"Hornell, NY",
-//"Hudson, NY",
-//"Ithaca, NY",
-//"Jamestown, NY",
-//"Johnstown, NY",
-//"Kingston, NY",
-//"Lackawanna, NY",
-//"Little Falls, NY",
-//"Lockport, NY",
-//"Long Beach, NY",
-//"Mechanicville, NY",
-//"Middletown, NY",
-//"Mount Vernon, NY",
-//"New Rochelle, NY",
-"New York, NY"
-//"Newburgh, NY",
-//"Niagara Falls, NY",
-//"North Tonawanda, NY",
-//"Norwich, NY",
-//"Ogdensburg, NY",
-//"Olean, NY",
-//"Oneida, NY",
-//"Oneonta, NY",
-//"Oswego, NY",
-//"Peekskill, NY",
-//"Plattsburgh, NY",
-//"Port Jervis, NY",
-//"Poughkeepsie, NY",
-//"Rensselaer, NY",
-//"Rochester, NY",
-//"Rome, NY",
-//"Rye, NY",
-//"Salamanca, NY",
-//"Saratoga Springs, NY",
-//"Schenectady, NY",
-//"Sherrill, NY",
-//"Syracuse, NY",
-//"Tonawanda, NY",
-//"Troy, NY",
-//"Utica, NY",
-//"Watertown, NY",
-//"Watervliet, NY",
-//"White Plains, NY",
-//"Yonkers, NY"
+            return new List<string> { //"Albany, NY",
+"Amsterdam, NY",
+"Auburn, NY",
+"Batavia, NY",
+"Beacon, NY",
+"Binghamton, NY",
+"Buffalo, NY",
+"Canandaigua, NY",
+"Cohoes, NY",
+"Corning, NY",
+"Cortland, NY",
+"Dunkirk, NY",
+"Elmira, NY",
+"Fulton, NY",
+"Geneva, NY",
+"Glen Cove, NY",
+"Glens Falls, NY",
+"Gloversville, NY",
+"Hornell, NY",
+"Hudson, NY",
+"Ithaca, NY",
+"Jamestown, NY",
+"Johnstown, NY",
+"Kingston, NY",
+"Lackawanna, NY",
+"Little Falls, NY",
+"Lockport, NY",
+"Long Beach, NY",
+"Mechanicville, NY",
+"Middletown, NY",
+"Mount Vernon, NY",
+"New Rochelle, NY",
+"New York, NY",
+"Newburgh, NY",
+"Niagara Falls, NY",
+"North Tonawanda, NY",
+"Norwich, NY",
+"Ogdensburg, NY",
+"Olean, NY",
+"Oneida, NY",
+"Oneonta, NY",
+"Oswego, NY",
+"Peekskill, NY",
+"Plattsburgh, NY",
+"Port Jervis, NY",
+"Poughkeepsie, NY",
+"Rensselaer, NY",
+"Rochester, NY",
+"Rome, NY",
+"Rye, NY",
+"Salamanca, NY",
+"Saratoga Springs, NY",
+"Schenectady, NY",
+"Sherrill, NY",
+"Syracuse, NY",
+"Tonawanda, NY",
+"Troy, NY",
+"Utica, NY",
+"Watertown, NY",
+"Watervliet, NY",
+"White Plains, NY",
+"Yonkers, NY"
 };
         }
 

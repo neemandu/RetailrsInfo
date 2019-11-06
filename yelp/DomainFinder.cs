@@ -75,7 +75,8 @@ namespace yelp
                     bool isStore = false;
                     for(var i = 0; i < o["result"]["types"].Count() && !isStore; i++)
                     {
-                        if (o["result"]["types"][i].ToString() == "store")
+                        if (o["result"]["types"][i].ToString() == "store" || 
+                            o["result"]["types"][i].ToString() == "establishment")
                             isStore = true;
                     }
                     if(isStore)
