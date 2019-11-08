@@ -8,6 +8,8 @@ namespace yelp
 {
     public class EmailDetails
     {
+        public string Domain { get; set; }
+        public string Company { get; set; }
         public string Departmnt { get; set; }
         public string Phone { get; set; }
         public string Seniority { get; set; }

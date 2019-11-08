@@ -243,3 +243,6 @@ C:\Projects\RetailrsInfo\yelp\obj\Debug\yelp.exe.config
 C:\Projects\RetailrsInfo\yelp\obj\Debug\yelp.csproj.CopyComplete
 C:\Projects\RetailrsInfo\yelp\obj\Debug\yelp.exe
 C:\Projects\RetailrsInfo\yelp\obj\Debug\yelp.pdb
+C:\Projects\RetailrsInfo\yelp\bin\Debug\NLog.config
+C:\Projects\RetailrsInfo\yelp\bin\Debug\NLog.dll
+C:\Projects\RetailrsInfo\yelp\bin\Debug\NLog.xml

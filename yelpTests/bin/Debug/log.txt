@@ -1,0 +1,8 @@
+2019-11-08 14:18:00.0826|ERROR hunter error - did not find email nate@malcolmsrestaurant.com. msg - [
+  {
+    "id": "authentication_failed",
+    "code": 401,
+    "details": "No user found for the API key supplied"
+  }
+] 
+2019-11-08 14:43:23.2859|INFO              Found 5 placesIds fromgoogle maps api for Barnes & Noble Albany NY 
