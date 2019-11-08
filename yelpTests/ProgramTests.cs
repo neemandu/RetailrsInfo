@@ -14,7 +14,7 @@ namespace yelp.Tests
         [TestMethod()]
         public void IsEmailGoodTest()
         {
-            var isGood = Program.IsEmailGood("nate@malcolmsrestaurant.com");
+            var isGood = Program.IsEmailGood(@"//8b4e078a51d04e0e9efdf470027f0ec1@sentry.wixpress.com");
             Assert.IsFalse(isGood);
         }
     }

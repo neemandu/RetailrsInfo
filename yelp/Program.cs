@@ -105,7 +105,7 @@ namespace yelp
                                                             _logger.Info($"                 {url} ");
 
                                                             string responseBody = "";
-                                                            using(var client = new HttpClient())
+                                                            using (var client = new HttpClient())
                                                             {
                                                                 var res = client.GetAsync(url).GetAwaiter().GetResult();
                                                                 using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
@@ -113,7 +113,7 @@ namespace yelp
                                                                     responseBody = sr.ReadToEnd();
                                                                 }
                                                             }
-                                                            
+
                                                             _logger.Info($"                 hunter response: {responseBody}");
                                                             JObject o = JObject.Parse(responseBody);
                                                             var hunter_emails = o["data"]["emails"];
@@ -141,14 +141,19 @@ namespace yelp
                                                         facebook = string.IsNullOrEmpty(fb) ? facebook : fb;
                                                         insta = string.IsNullOrEmpty(instagram) ? insta : instagram;
                                                     }
+                                                    _logger.Info("                 Iterating emails from website");
                                                     foreach (string m in emailAddrs)
                                                     {
                                                         if (!emails.Any(mai => mai.Email == m))
                                                         {
-                                                            emails.Add(new EmailDetails
+                                                            if (IsEmailGood(m))
                                                             {
-                                                                Email = m
-                                                            });
+                                                                emails.Add(new EmailDetails
+                                                                {
+                                                                    Email = m
+                                                                });
+
+                                                            }
                                                         }
                                                     }
 
@@ -350,9 +355,9 @@ namespace yelp
             }
 
             string url = $"https://api.hunter.io/v2/email-verifier?email={mail}&api_key={_hunter_api_key}";
-    
+
             string responseBody = "";
-            using(var client = new HttpClient())
+            using (var client = new HttpClient())
             {
                 var res = client.GetAsync(url).GetAwaiter().GetResult();
                 using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
@@ -372,7 +377,7 @@ namespace yelp
                     _logger.Error($"HUNTER CHANGED API - no data->result key");
                     Environment.Exit(1);
                 }
-                    
+
                 result = o["data"]["result"]?.ToString() ?? "undeliverable";
             }
             if (o.ContainsKey("errors"))
@@ -406,7 +411,8 @@ namespace yelp
             {
                 if (domain.Contains("http") || domain.Contains("https") || domain.Contains("www"))
                 {
-                    using(var client = new HttpClient())
+                    _logger.Info("             GetSocialFromWebSite has start");
+                    using (var client = new HttpClient())
                     {
                         var res = client.GetAsync(domain).GetAwaiter().GetResult();
                         using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
@@ -414,7 +420,7 @@ namespace yelp
                             responseBody = sr.ReadToEnd();
                         }
                     }
-                    
+
 
 
                     if (!string.IsNullOrEmpty(responseBody))
@@ -438,6 +444,7 @@ namespace yelp
                 }
                 else
                 {
+                    _logger.Info("             GetSocialFromWebSite has no start");
                     responseBody = GetSiteContent(domain, "http://");
                     if (string.IsNullOrEmpty(responseBody))
                         responseBody = GetSiteContent(domain, "https://");
@@ -464,8 +471,12 @@ namespace yelp
                         twitter = GetMatched(responseBody, twitterregex);
                     }
                 }
+                _logger.Info("             GetSocialFromWebSite finished");
             }
-            catch (Exception e) { }
+            catch (Exception e) 
+            {
+                _logger.Error(e, e.Message);
+            }
         }
 
         private static string GetSiteContent(string domain, string val)
@@ -477,7 +488,7 @@ namespace yelp
                     string url = val + domain;
 
                     string responseBody = "";
-                    using(var client = new HttpClient())
+                    using (var client = new HttpClient())
                     {
                         var res = client.GetAsync(url).GetAwaiter().GetResult();
                         using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
@@ -491,6 +502,7 @@ namespace yelp
                 }
                 catch (Exception ex)
                 {
+                    _logger.Error(ex, ex.Message);
                     return "";
                 }
             }
@@ -500,7 +512,7 @@ namespace yelp
                 {
 
                     string responseBody = "";
-                    using(var client = new HttpClient())
+                    using (var client = new HttpClient())
                     {
                         var res = client.GetAsync(domain).GetAwaiter().GetResult();
                         using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
@@ -515,6 +527,7 @@ namespace yelp
                 }
                 catch (Exception ex)
                 {
+                    _logger.Error(ex, ex.Message);
                     return "";
                 }
             }
@@ -546,7 +559,7 @@ namespace yelp
         private static List<string> GetCategories()
         {
             //return new List<string> { "watches", "giftshops" };
-            return new List<string> { "officeequipment", "bookstores", "gifts" };
+            return new List<string> { "giftshops", "officeequipment", "bookstores" };
         }
 
         private static List<string> GetLocations()
@@ -604,15 +617,15 @@ namespace yelp
 //"Salamanca, NY",
 //"Saratoga Springs, NY",
 "Schenectady, NY",
-//"Sherrill, NY",
-//"Syracuse, NY",
-//"Tonawanda, NY",
-//"Troy, NY",
-//"Utica, NY",
-//"Watertown, NY",
-//"Watervliet, NY",
-//"White Plains, NY",
-//"Yonkers, NY"
+"Sherrill, NY",
+"Syracuse, NY",
+"Tonawanda, NY",
+"Troy, NY",
+"Utica, NY",
+"Watertown, NY",
+"Watervliet, NY",
+"White Plains, NY",
+"Yonkers, NY"
 };
         }
 
@@ -744,7 +757,7 @@ namespace yelp
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "");
+                _logger.Error(ex, ex.Message);
             }
         }
 
@@ -753,7 +766,7 @@ namespace yelp
             try
             {
                 string responseBody = "";
-                using(var client = new HttpClient())
+                using (var client = new HttpClient())
                 {
                     var res = client.GetAsync(url).GetAwaiter().GetResult();
                     using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
@@ -770,7 +783,9 @@ namespace yelp
                 domain = domain.Substring(domain.IndexOf("http://") < 0 ? 0 : domain.IndexOf("http://") + 7);
                 domain = domain.Substring(domain.IndexOf("www.") < 0 ? 0 : domain.IndexOf("www.") + 4);
             }
-            catch (Exception ex) { domain = ""; }
+            catch (Exception ex) {
+                _logger.Error(ex, ex.Message);
+                domain = ""; }
         }
     }
 }
