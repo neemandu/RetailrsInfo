@@ -12,6 +12,7 @@ namespace yelp
 
     public class Database
     {
+        private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
         SQLiteConnection _conn;
 
         public Database()
@@ -20,9 +21,42 @@ namespace yelp
             if (!File.Exists("./database.sqlite3"))
             {
                 SQLiteConnection.CreateFile("database.sqlite3");
-                Console.WriteLine("DB file created");
+                _logger.Info("DB file created");
             }
 
+        }
+
+        public List<EmailDetails> GetEmails(string query, string realdomain, string company, Database db)
+        {
+            SQLiteCommand cmd = new SQLiteCommand(query, _conn);
+            OpenConnection();
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new SQLiteParameter("@Company", company));
+            cmd.Parameters.Add(new SQLiteParameter("@Domain", realdomain));
+            List<EmailDetails> ret = new List<EmailDetails>();
+            using (SQLiteDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    ret.Add(new EmailDetails
+                    {
+                        Company = (reader["Company"] is DBNull) ? null : (string)reader["Company"],
+                        Departmnt = (reader["Departmnt"] is DBNull) ? null : (string)reader["Departmnt"],
+                        Domain = (reader["Domain"] is DBNull) ? null : (string)reader["Domain"],
+                        Email = (reader["Email"] is DBNull) ? null : (string)reader["Email"],
+                        FirstName = (reader["FirstName"] is DBNull) ? null : (string)reader["FirstName"],
+                        LastName = (reader["LastName"] is DBNull) ? null : (string)reader["LastName"],
+                        LinkedIn = (reader["LinkedIn"] is DBNull) ? null : (string)reader["LinkedIn"],
+                        Phone = (reader["Phone"] is DBNull) ? null : (string)reader["Phone"],
+                        Position = (reader["Position"] is DBNull) ? null : (string)reader["Position"],
+                        Seniority = (reader["Seniority"] is DBNull) ? null : (string)reader["Seniority"],
+                        Twitter = (reader["Twitter"] is DBNull) ? null : (string)reader["Twitter"]
+                    });
+                }
+            }
+
+            CloseConnection();
+            return ret;
         }
 
         public List<string> GetDomainssWithoutEmails()
@@ -189,6 +223,46 @@ namespace yelp
             {
                 _conn.Close();
             }
+        }
+
+        internal void DeleteEmailsInDb(string query, string domain, Database db)
+        {
+            SQLiteCommand cmd = new SQLiteCommand(query, _conn);
+            OpenConnection();
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new SQLiteParameter("@Domain", domain));
+            cmd.ExecuteNonQuery();
+            CloseConnection();
+        }
+
+        internal void AddEmailToDb(string query, EmailDetails item, Database db)
+        {
+            SQLiteCommand cmd = new SQLiteCommand(query, _conn);
+            OpenConnection();
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new SQLiteParameter("@Domain", item.Domain));
+            cmd.Parameters.Add(new SQLiteParameter("@Company", item.Company));
+            cmd.Parameters.Add(new SQLiteParameter("@Departmnt", item.Departmnt));
+            cmd.Parameters.Add(new SQLiteParameter("@Email", item.Email));
+            cmd.Parameters.Add(new SQLiteParameter("@FirstName", item.FirstName));
+            cmd.Parameters.Add(new SQLiteParameter("@LastName", item.LastName));
+            cmd.Parameters.Add(new SQLiteParameter("@LinkedIn", item.LinkedIn));
+            cmd.Parameters.Add(new SQLiteParameter("@Phone", item.Phone));
+            cmd.Parameters.Add(new SQLiteParameter("@Position", item.Position));
+            cmd.Parameters.Add(new SQLiteParameter("@Seniority", item.Seniority));
+            cmd.Parameters.Add(new SQLiteParameter("@Twitter", item.Twitter));
+            cmd.ExecuteNonQuery();
+            CloseConnection();
+        }
+
+        internal void DeleteRecordsInDb(string query,string domain, Database db)
+        {
+            SQLiteCommand cmd = new SQLiteCommand(query, _conn);
+            OpenConnection();
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new SQLiteParameter("@Domain", domain));
+            cmd.ExecuteNonQuery();
+            CloseConnection();
         }
     }
 }
