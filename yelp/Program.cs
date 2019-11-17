@@ -74,10 +74,12 @@ namespace yelp
                                                 int numOfEmails = 0;
                                                 if (domainsEmails.ContainsKey(domain))
                                                 {
+                                                    Console.WriteLine($"taking emails from cache for domain {domain}");
                                                     emails = domainsEmails[domain];
                                                 }
                                                 else
                                                 {
+                                                    Console.WriteLine($"taking emails from hunter for domain {domain}");
                                                     string url = $"https://api.hunter.io/v2/domain-search?domain={realdomain}&limit=5&api_key={_hunter_api_key}";
                                                     if (string.IsNullOrEmpty(realdomain))
                                                         url = $"https://api.hunter.io/v2/domain-search?company={business.Name}&limit=5&api_key={_hunter_api_key}";
@@ -85,6 +87,8 @@ namespace yelp
                                                     JObject o = JObject.Parse(responseBody);
                                                     var hunter_emails = o["data"]["emails"];
                                                     emails = CreateEmailListFromHunter(hunter_emails);
+                                                    string info = string.IsNullOrEmpty(realdomain) ? $"company: {business.Name}" : $"domain: {realdomain}";
+                                                    Console.WriteLine($"Found {emails?.Count ?? 0} from hunter for {info}");
                                                     domainsEmails.Add(domain, emails);
                                                     numOfEmails = int.Parse(o["meta"]["results"]?.Value<string>());
                                                     realdomain = string.IsNullOrEmpty(realdomain) ? o["data"]["domain"].Value<string>() : realdomain;
@@ -205,6 +209,7 @@ namespace yelp
 
         private static List<EmailDetails> CreateEmailListFromHunter(JToken hunter_emails)
         {
+            Console.WriteLine($"CreateEmailListFromHunter");
             List<EmailDetails> ret = new List<EmailDetails>();
             foreach (var email in hunter_emails)
             {
@@ -221,23 +226,36 @@ namespace yelp
                     Twitter = email["twitter"].ToString()
                 });
             }
-
+            Console.WriteLine($"FINISH CreateEmailListFromHunter");
             return ret;
         }
 
         private static bool IsEmailGood(string mail)
         {
+            Console.Write($"Checking email: {mail}  | ");
             List<string> badEmailFormats = GetBadEmailFormats();
             foreach (string format in badEmailFormats)
             {
                 if (mail.Contains(format))
+                {
+                    Console.Write($"BAD - has format {format}");
                     return false;
+                }
+                    
             }
 
             string url = $"https://api.hunter.io/v2/email-verifier?email={mail}&api_key={_hunter_api_key}";
             string responseBody = _httpClient.GetStringAsync(url).Result;
             JObject o = JObject.Parse(responseBody);
             var result = o["data"]["result"].ToString();
+            if(result != "undeliverable")
+            {
+                Console.WriteLine($"GOOD");
+            }
+            else
+            {
+                Console.WriteLine($"BAD - hunter status: {result}");
+            }
             return result != "undeliverable";
         }
 
@@ -254,6 +272,7 @@ namespace yelp
         private static void GetSocialFromWebSite(string domain, out string fb, out string instagram,
             out List<string> emailsList, out string linkedin, out string twitter, HttpClient _hunterClient)
         {
+            Console.WriteLine($"GetSocialFromWebSite for domain {domain}");
             fb = "";
             instagram = "";
             emailsList = new List<string>();
@@ -313,11 +332,13 @@ namespace yelp
                     }
                 }
             }
-            catch (Exception e) { }
+            catch (Exception e) { Console.WriteLine(e.Message); }
+            Console.WriteLine($"FINISH GetSocialFromWebSite for domain {domain}");
         }
 
         private static string GetSiteContent(string domain, string val)
         {
+            Console.WriteLine($"GetSiteContent domain: {domain} | val: {val}");
             if (!domain.Contains(val))
             {
                 try
@@ -343,6 +364,7 @@ namespace yelp
                     return "";
                 }
             }
+            
         }
 
         private static string GetMatched(string responseBody, string regex)
@@ -377,57 +399,57 @@ namespace yelp
         private static List<string> GetLocations()
         {
             return new List<string> { //"Albany, NY",
-"Amsterdam, NY",
-"Auburn, NY",
-"Batavia, NY",
-"Beacon, NY",
-"Binghamton, NY",
-"Buffalo, NY",
-"Canandaigua, NY",
-"Cohoes, NY",
-"Corning, NY",
-"Cortland, NY",
-"Dunkirk, NY",
-"Elmira, NY",
-"Fulton, NY",
-"Geneva, NY",
-"Glen Cove, NY",
-"Glens Falls, NY",
-"Gloversville, NY",
-"Hornell, NY",
-"Hudson, NY",
-"Ithaca, NY",
-"Jamestown, NY",
-"Johnstown, NY",
-"Kingston, NY",
-"Lackawanna, NY",
-"Little Falls, NY",
-"Lockport, NY",
-"Long Beach, NY",
-"Mechanicville, NY",
-"Middletown, NY",
-"Mount Vernon, NY",
-"New Rochelle, NY",
-"New York, NY",
-"Newburgh, NY",
-"Niagara Falls, NY",
-"North Tonawanda, NY",
-"Norwich, NY",
-"Ogdensburg, NY",
-"Olean, NY",
-"Oneida, NY",
-"Oneonta, NY",
-"Oswego, NY",
-"Peekskill, NY",
-"Plattsburgh, NY",
-"Port Jervis, NY",
-"Poughkeepsie, NY",
-"Rensselaer, NY",
-"Rochester, NY",
-"Rome, NY",
-"Rye, NY",
-"Salamanca, NY",
-"Saratoga Springs, NY",
+//"Amsterdam, NY",
+//"Auburn, NY",
+//"Batavia, NY",
+//"Beacon, NY",
+//"Binghamton, NY",
+//"Buffalo, NY",
+//"Canandaigua, NY",
+//"Cohoes, NY",
+//"Corning, NY",
+//"Cortland, NY",
+//"Dunkirk, NY",
+//"Elmira, NY",
+//"Fulton, NY",
+//"Geneva, NY",
+//"Glen Cove, NY",
+//"Glens Falls, NY",
+//"Gloversville, NY",
+//"Hornell, NY",
+//"Hudson, NY",
+//"Ithaca, NY",
+//"Jamestown, NY",
+//"Johnstown, NY",
+//"Kingston, NY",
+//"Lackawanna, NY",
+//"Little Falls, NY",
+//"Lockport, NY",
+//"Long Beach, NY",
+//"Mechanicville, NY",
+//"Middletown, NY",
+//"Mount Vernon, NY",
+//"New Rochelle, NY",
+//"New York, NY",
+//"Newburgh, NY",
+//"Niagara Falls, NY",
+//"North Tonawanda, NY",
+//"Norwich, NY",
+//"Ogdensburg, NY",
+//"Olean, NY",
+//"Oneida, NY",
+//"Oneonta, NY",
+//"Oswego, NY",
+//"Peekskill, NY",
+//"Plattsburgh, NY",
+//"Port Jervis, NY",
+//"Poughkeepsie, NY",
+//"Rensselaer, NY",
+//"Rochester, NY",
+//"Rome, NY",
+//"Rye, NY",
+//"Salamanca, NY",
+//"Saratoga Springs, NY",
 "Schenectady, NY",
 "Sherrill, NY",
 "Syracuse, NY",
