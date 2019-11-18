@@ -165,7 +165,7 @@ namespace yelp
             string linkedIn, string seniority, string twitter
                     , string departmntn, string retailType, string address1, string address2, string zipCode)
         {
-            _logger.Info($"Writing to DB, Domain{domain}");
+            _logger.Info($"Writing to DB, Domain - {domain}");
             SQLiteCommand cmd = new SQLiteCommand(query, _conn);
             OpenConnection();
             cmd.CommandType = CommandType.Text;

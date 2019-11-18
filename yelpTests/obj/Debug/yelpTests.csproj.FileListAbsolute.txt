@@ -51,3 +51,11 @@ C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Refit.dll
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Microsoft.VisualStudio.TestPlatform.TestFramework.xml
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.xml
 C:\Users\dneeman\source\repos\yelp\yelpTests\obj\Debug\yelpTests.csproj.CopyComplete
+C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\yelp.pdb
+C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\yelp.exe.config
+C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\NLog.xml
+C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\System.Data.SQLite.xml
+C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\System.Data.SQLite.dll.config
+C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Newtonsoft.Json.xml
+C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Refit.xml
+C:\Users\dneeman\source\repos\yelp\yelpTests\obj\Debug\yelpTests.csprojAssemblyReference.cache

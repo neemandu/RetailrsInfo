@@ -18,10 +18,9 @@ namespace yelp
     public class Program
     {
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
-        private static readonly int _hunterLimit = 10;
+        private static readonly int _hunterLimit = 423;
         static string _hunter_api_key = ConfigurationManager.AppSettings.Get("hunter_api_key");
         private static int _hunterCtr = 0;
-        private static bool _useOnlyDomainForHunter = true;
 
         static void Main(string[] args)
         {
@@ -34,7 +33,6 @@ namespace yelp
 
             List<string> locations = GetLocations();
             List<string> categories = GetCategories();
-            int indent = 0;
             List<Details> details = new List<Details>();
             foreach (string location in locations)
             {
@@ -103,10 +101,9 @@ namespace yelp
                                                         {
                                                             if (_hunterCtr == _hunterLimit)
                                                             {
-                                                                _logger.Info("Reached manual hunter limit - " + _hunterLimit);
-                                                                Environment.Exit(1);
+                                                                Exit("Reached manual hunter limit - " + _hunterLimit);
                                                             }
-                                                            bool isDomaingettingResultsFromHunter = true;
+                                                            bool isDomainGettingResultsFromHunter = true;
                                                             _logger.Info($"                 Getting emails from hunter");
                                                             string url = $"https://api.hunter.io/v2/domain-search?domain={realdomain}&limit=5&api_key={_hunter_api_key}";
                                                             _logger.Info("                 Searching hunter with url: ");
@@ -128,7 +125,7 @@ namespace yelp
                                                             emails = CreateEmailListFromHunter(hunter_emails);
                                                             if(emails == null || emails.Count == 0)
                                                             {
-                                                                isDomaingettingResultsFromHunter = false;
+                                                                isDomainGettingResultsFromHunter = false;
                                                                 url = $"https://api.hunter.io/v2/domain-search?company={pair.Company}&limit=5&api_key={_hunter_api_key}";
                                                                 _logger.Info("                 Searching hunter with url: ");
                                                                 _logger.Info($"                 {url} ");
@@ -149,7 +146,8 @@ namespace yelp
                                                                 emails = CreateEmailListFromHunter(hunter_emails_comp);
                                                             }
                                                             numOfEmails = int.Parse(o["meta"]["results"]?.Value<string>());
-                                                            realdomain = string.IsNullOrEmpty(realdomain) | !isDomaingettingResultsFromHunter ? o["data"]["domain"].Value<string>() : realdomain;
+                                                            realdomain = (string.IsNullOrEmpty(realdomain) || !isDomainGettingResultsFromHunter) && !string.IsNullOrWhiteSpace(o["data"]["domain"].Value<string>())
+                                                                ? o["data"]["domain"].Value<string>() : realdomain;
                                                             _hunterCtr++;
                                                         }
                                                     }
@@ -296,6 +294,15 @@ namespace yelp
                 catch (Exception x)
                 { _logger.Error(x, ""); }
             }
+            _logger.Info("FINISH");
+            
+        }
+
+        public static void Exit(string finishRsn)
+        {
+            _logger.Info(finishRsn);
+            _logger.Info("FINISH");
+            Environment.Exit(1);
         }
 
         private static void DeleteRecordsInDb(string domain, Database db)
@@ -407,7 +414,7 @@ namespace yelp
                 if (!ss.ContainsKey("result"))
                 {
                     _logger.Error($"HUNTER CHANGED API - no data->result key");
-                    Environment.Exit(1);
+                    Exit("________________________________________________");
                 }
 
                 result = o["data"]["result"]?.ToString() ?? "undeliverable";
@@ -460,35 +467,7 @@ namespace yelp
                 if (domain.Contains("http") || domain.Contains("https") || domain.Contains("www"))
                 {
                     _logger.Info("             GetSocialFromWebSite has start");
-                    using (var client = new HttpClient())
-                    {
-                        var res = client.GetAsync(domain).GetAwaiter().GetResult();
-                        using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
-                        {
-                            responseBody = sr.ReadToEnd();
-                        }
-                    }
-
-
-
-                    if (!string.IsNullOrEmpty(responseBody))
-                    {
-
-                        string fbregex = @"(?:(?:http|https):\/\/)?(?:www.)?facebook.com\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[?\w\-]*\/)?(?:profile.php\?id=(?=\d.*))?([\w\-]*)?";
-                        fb = GetMatched(responseBody, fbregex);
-
-                        string instregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:instagram.com|instagr.am)\/([A-Za-z0-9-_\.]+)";
-                        instagram = GetMatched(responseBody, instregex);
-
-                        string emailregex = @"([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})";
-                        emailsList = GetMatchedList(responseBody, emailregex);
-
-                        string linkedinregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:linkedin.com)(\/([A-Za-z0-9-_\.]+))+";
-                        linkedin = GetMatched(responseBody, linkedinregex);
-
-                        string twitterregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:twitter.com)\/([A-Za-z0-9-_\.]+)";
-                        twitter = GetMatched(responseBody, twitterregex);
-                    }
+                    responseBody = GetResponse(domain);                    
                 }
                 else
                 {
@@ -500,31 +479,89 @@ namespace yelp
                         responseBody = GetSiteContent(domain, "http://www.");
                     if (string.IsNullOrEmpty(responseBody))
                         responseBody = GetSiteContent(domain, "https://www.");
-                    if (!string.IsNullOrEmpty(responseBody))
-                    {
-
-                        string fbregex = @"(?:(?:http|https):\/\/)?(?:www.)?facebook.com\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[?\w\-]*\/)?(?:profile.php\?id=(?=\d.*))?([\w\-]*)?";
-                        fb = GetMatched(responseBody, fbregex);
-
-                        string instregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:instagram.com|instagr.am)\/([A-Za-z0-9-_\.]+)";
-                        instagram = GetMatched(responseBody, instregex);
-
-                        string emailregex = @"([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})";
-                        emailsList = GetMatchedList(responseBody, emailregex);
-
-                        string linkedinregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:linkedin.com)(\/([A-Za-z0-9-_\.]+))+";
-                        linkedin = GetMatched(responseBody, linkedinregex);
-
-                        string twitterregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:twitter.com)\/([A-Za-z0-9-_\.]+)";
-                        twitter = GetMatched(responseBody, twitterregex);
-                    }
                 }
+                if (!string.IsNullOrEmpty(responseBody))
+                {
+                    GetSocialsFromWebSite(responseBody, ref fb, ref instagram, ref emailsList, ref linkedin, ref twitter);
+                }
+
                 _logger.Info("             GetSocialFromWebSite finished");
             }
             catch (Exception e)
             {
                 _logger.Error(e, e.Message);
             }
+        }
+
+        private static void GetSocialsFromWebSite(string responseBody, ref string fb, ref string instagram, ref List<string> emailsList, ref string linkedin, ref string twitter)
+        {
+            string fbregex = @"(?:(?:http|https):\/\/)?(?:www.)?facebook.com\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[?\w\-]*\/)?(?:profile.php\?id=(?=\d.*))?([\w\-]*)?";
+            var lst = GetMatchedList(responseBody, fbregex);
+            if (lst != null && lst.Count > 0)
+            {
+                fb = GetCorrectSocial(lst);
+            }
+
+            string instregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:instagram.com|instagr.am)\/([A-Za-z0-9-_\.]+)";
+            //instagram = GetMatched(responseBody, instregex);
+            lst = GetMatchedList(responseBody, instregex);
+            if (lst != null && lst.Count > 0)
+            {
+                instagram = GetCorrectSocial(lst);
+            }
+
+            string emailregex = @"([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})";
+            emailsList = GetMatchedList(responseBody, emailregex);
+
+            string linkedinregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:linkedin.com)(\/([A-Za-z0-9-_\.]+))+";
+            //linkedin = GetMatched(responseBody, linkedinregex);
+            lst = GetMatchedList(responseBody, linkedinregex);
+            if (lst != null && lst.Count > 0)
+            {
+                linkedin = GetCorrectSocial(lst);
+            }
+
+            string twitterregex = @"(?:(?:http|https):\/\/)?(?:www.)?(?:twitter.com)\/([A-Za-z0-9-_\.]+)";
+            //twitter = GetMatched(responseBody, twitterregex);
+            lst = GetMatchedList(responseBody, twitterregex);
+            if (lst != null && lst.Count > 0)
+            {
+                twitter = GetCorrectSocial(lst);
+            }
+        }
+
+        private static string GetResponse(string domain)
+        {
+            string responseBody = "";
+            using (var client = new HttpClient())
+            {
+                var res = client.GetAsync(domain).GetAwaiter().GetResult();
+                using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
+                {
+                    responseBody = sr.ReadToEnd();
+                }
+            }
+
+            return responseBody;
+        }
+
+        private static string GetCorrectSocial(List<string> lst)
+        {
+            string correct = null;
+            foreach(string item in lst)
+            {
+                using (var client = new HttpClient())
+                {
+                    var res = client.GetAsync(item).GetAwaiter().GetResult();
+                    if (res.IsSuccessStatusCode)
+                    {
+                        correct = item;
+                        break;
+                    }
+                }
+            }
+
+            return correct;
         }
 
         private static string GetSiteContent(string domain, string val)
@@ -613,45 +650,46 @@ namespace yelp
 
         private static List<string> GetCategories()
         {
-            return new List<string> { "partysupplies", "partycharacters", "partyequipmentrentals" };
+            return new List<string> { "partysupplies" };
             //return new List<string> { "giftshops", "officeequipment", "bookstores" };
         }
 
         private static List<string> GetLocations()
         {
-            return new List<string> { "Albany, NY",
-//"Amsterdam, NY",
-//"Auburn, NY",
-//"Batavia, NY",
-//"Beacon, NY",
-//"Binghamton, NY",
-//"Buffalo, NY",
-//"Canandaigua, NY",
-//"Cohoes, NY",
-//"Corning, NY",
-//"Cortland, NY",
-//"Dunkirk, NY",
-//"Elmira, NY",
-//"Fulton, NY",
-//"Geneva, NY",
-//"Glen Cove, NY",
-//"Glens Falls, NY",
-//"Gloversville, NY",
-//"Hornell, NY",
-//"Hudson, NY",
-//"Ithaca, NY",
-//"Jamestown, NY",
-//"Johnstown, NY",
-//"Kingston, NY",
-//"Lackawanna, NY",
-//"Little Falls, NY",
-//"Lockport, NY",
-//"Long Beach, NY",
-//"Mechanicville, NY",
-//"Middletown, NY",
-//"Mount Vernon, NY",
-//"New Rochelle, NY",
-"New York, NY",
+            return new List<string> {
+"Albany, NY",
+"Amsterdam, NY",
+"Auburn, NY",
+"Batavia, NY",
+"Beacon, NY",
+"Binghamton, NY",
+"Buffalo, NY",
+"Canandaigua, NY",
+"Cohoes, NY",
+"Corning, NY",
+"Cortland, NY",
+"Dunkirk, NY",
+"Elmira, NY",
+"Fulton, NY",
+"Geneva, NY",
+"Glen Cove, NY",
+"Glens Falls, NY",
+"Gloversville, NY",
+"Hornell, NY",
+"Hudson, NY",
+"Ithaca, NY",
+"Jamestown, NY",
+"Johnstown, NY",
+"Kingston, NY",
+"Lackawanna, NY",
+"Little Falls, NY",
+"Lockport, NY",
+"Long Beach, NY",
+"Mechanicville, NY",
+"Middletown, NY",
+"Mount Vernon, NY",
+"New Rochelle, NY",
+//"New York, NY",
 "Newburgh, NY",
 "Niagara Falls, NY",
 "North Tonawanda, NY",
@@ -660,27 +698,27 @@ namespace yelp
 "Olean, NY",
 "Oneida, NY",
 "Oneonta, NY",
-"Oswego, NY"
-//"Peekskill, NY",
-//"Plattsburgh, NY",
-//"Port Jervis, NY",
-//"Poughkeepsie, NY",
-//"Rensselaer, NY",
-//"Rochester, NY",
-//"Rome, NY",
-//"Rye, NY",
-//"Salamanca, NY",
-//"Saratoga Springs, NY",
-//"Schenectady, NY",
-//"Sherrill, NY",
-//"Syracuse, NY",
-//"Tonawanda, NY",
-//"Troy, NY",
-//"Utica, NY",
-//"Watertown, NY",
-//"Watervliet, NY",
-//"White Plains, NY",
-//"Yonkers, NY"
+"Oswego, NY",
+"Peekskill, NY",
+"Plattsburgh, NY",
+"Port Jervis, NY",
+"Poughkeepsie, NY",
+"Rensselaer, NY",
+"Rochester, NY",
+"Rome, NY",
+"Rye, NY",
+"Salamanca, NY",
+"Saratoga Springs, NY",
+"Schenectady, NY",
+"Sherrill, NY",
+"Syracuse, NY",
+"Tonawanda, NY",
+"Troy, NY",
+"Utica, NY",
+"Watertown, NY",
+"Watervliet, NY",
+"White Plains, NY",
+"Yonkers, NY"
 };
         }
 

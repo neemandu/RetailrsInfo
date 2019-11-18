@@ -21,7 +21,7 @@ namespace yelp.Tests
         [TestMethod()]
         public void GetSocialFromWebSiteTest()
         {
-            Program.GetSocialFromWebSite("valenciacake.com", out string fb, out string instagram,
+            Program.GetSocialFromWebSite("partytime-rentals.com", out string fb, out string instagram,
                 out List<string> emailList, out string linkedin, out string twitter);
         }
     }

@@ -33,3 +33,16 @@
 2019-11-17 22:13:37.9184|INFO Checking email: info@valenciacake.com  |  
 2019-11-17 22:16:46.1579|INFO Checking email: info@valenciacake.com  |  
 2019-11-17 22:19:25.9036|INFO Checking email: info@happydazecostumes.com  |  
+2019-11-18 00:29:51.2960|INFO GetSocialFromWebSite for domain giulianospartyrental.com 
+2019-11-18 00:29:51.3494|INFO              GetSocialFromWebSite has no start 
+2019-11-18 00:29:51.3531|INFO GetSiteContent domain: giulianospartyrental.com | val: http:// 
+2019-11-18 00:29:53.1503|INFO              GetSocialFromWebSite finished 
+2019-11-18 09:04:44.6653|INFO GetSocialFromWebSite for domain partytime-rentals.com 
+2019-11-18 09:04:49.7281|INFO              GetSocialFromWebSite has no start 
+2019-11-18 09:04:53.0361|INFO GetSiteContent domain: partytime-rentals.com | val: http:// 
+2019-11-18 09:55:20.6039|INFO GetSocialFromWebSite for domain partytime-rentals.com 
+2019-11-18 09:55:26.5603|INFO              GetSocialFromWebSite has no start 
+2019-11-18 09:55:27.6011|INFO GetSiteContent domain: partytime-rentals.com | val: http:// 
+2019-11-18 10:01:16.4356|INFO GetSocialFromWebSite for domain partytime-rentals.com 
+2019-11-18 10:01:18.8603|INFO              GetSocialFromWebSite has no start 
+2019-11-18 10:01:18.8960|INFO GetSiteContent domain: partytime-rentals.com | val: http:// 
