@@ -15,7 +15,7 @@ namespace yelp.Tests
         public void GetAllWebSitesTest()
         {
             DomainFinder df = new DomainFinder();
-            df.GetAllWebSites("Barnes & Noble Albany NY");
+            df.GetAllWebSites("Barnes & Noble", "",  "Barnes & Noble Albany NY");
         }
     }
 }

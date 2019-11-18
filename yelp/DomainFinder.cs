@@ -67,7 +67,7 @@ namespace yelp
             return new List<string>();
         }
 
-        public List<DomainCompany> GetAllWebSites(string searchTerm)
+        public List<DomainCompany> GetAllWebSites(string businessName, string phone, string searchTerm)
         {
             Dictionary<string, string> domainsDict = new Dictionary<string, string>();
             try
@@ -77,7 +77,7 @@ namespace yelp
 
                 List<string> placeIds = GetPlaceIds(searchTerm);
                 List<string> domains = new List<string>();
-                _logger.Info($"             Found {placeIds.Count} placesIds fromgoogle maps api for {searchTerm}");
+                _logger.Info($"             Found {placeIds.Count} placesIds from google maps api for {searchTerm}");
                 foreach (var placeId in placeIds)
                 {
                     Thread.Sleep(200);
@@ -102,10 +102,14 @@ namespace yelp
                             }
                         }
                     }
+                    JObject o = JObject.Parse(responseBody);
+
+                    string name = o["result"]["name"].ToString();
                     if (!isGoodCall)
                         continue;
 
-                    JObject o = JObject.Parse(responseBody);
+
+                    
                     bool isStore = false;
                     for (var i = 0; i < o["result"]["types"].Count() && !isStore; i++)
                     {
@@ -115,17 +119,27 @@ namespace yelp
                     }
                     if (isStore)
                     {
-                        var e = o["result"]["website"];
-                        if (!string.IsNullOrEmpty(e?.ToString()))
+                        var googlePhone = o["result"]["international_phone_number"]?.ToString() ?? "";
+                        if (!string.IsNullOrEmpty(googlePhone) && !string.IsNullOrEmpty(phone))
+                        {
+                            googlePhone = googlePhone.Replace("+", "").Replace("-", "").Replace("(", "").Replace(")", "").Replace(" ", "").Trim();
+                            phone = phone.Replace("+", "").Replace("-", "").Replace("(", "").Replace(")", "").Replace(" ", "").Trim();
+
+                            if (googlePhone != phone)
+                                continue;
+                        }
+                        
+                        var website = o["result"]["website"];
+                        if (!string.IsNullOrEmpty(website?.ToString()))
                         {
                             try
                             {
                                 using (var client = new HttpClient())
                                 {
-                                    var res = client.GetAsync(e.ToString()).GetAwaiter().GetResult();
+                                    var res = client.GetAsync(website.ToString()).GetAwaiter().GetResult();
                                     if (res.IsSuccessStatusCode)
                                     {
-                                        string dom = GetDomainFromUrl(e.ToString());
+                                        string dom = GetDomainFromUrl(website.ToString());
                                         string company = o["result"]["name"].ToString();
                                         if (!domainsDict.ContainsKey(dom))
                                         {

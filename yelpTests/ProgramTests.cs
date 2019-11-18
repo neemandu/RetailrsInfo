@@ -14,8 +14,15 @@ namespace yelp.Tests
         [TestMethod()]
         public void IsEmailGoodTest()
         {
-            var isGood = Program.IsEmailGood(@"//8b4e078a51d04e0e9efdf470027f0ec1@sentry.wixpress.com");
-            Assert.IsFalse(isGood);
+            var isGood = Program.IsEmailGood(@"info@happydazecostumes.com");
+            Assert.IsTrue(isGood);
+        }
+
+        [TestMethod()]
+        public void GetSocialFromWebSiteTest()
+        {
+            Program.GetSocialFromWebSite("valenciacake.com", out string fb, out string instagram,
+                out List<string> emailList, out string linkedin, out string twitter);
         }
     }
 }

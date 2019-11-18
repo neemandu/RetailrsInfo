@@ -6,3 +6,30 @@
   }
 ] 
 2019-11-08 14:43:23.2859|INFO              Found 5 placesIds fromgoogle maps api for Barnes & Noble Albany NY 
+2019-11-17 20:17:15.7863|INFO              GetSocialFromWebSite has no start 
+2019-11-17 20:18:24.7527|ERROR An error occurred while sending the request. System.Net.Http.HttpRequestException: An error occurred while sending the request. ---> System.Net.WebException: The remote name could not be resolved: 'naccanada.org'
+   at System.Net.HttpWebRequest.EndGetResponse(IAsyncResult asyncResult)
+   at System.Net.Http.HttpClientHandler.GetResponseCallback(IAsyncResult ar)
+   --- End of inner exception stack trace ---
+   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)
+   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()
+   at yelp.Program.GetSiteContent(String domain, String val) in C:\Users\dneeman\source\repos\yelp\yelp\Program.cs:line 508
+2019-11-17 20:46:05.9413|INFO GetSiteContent domain: naccanada.org | val: https:// 
+2019-11-17 20:46:15.2006|ERROR GetSiteContent domain - naccanada.org | val - https:// 
+2019-11-17 20:46:15.3707|ERROR An error occurred while sending the request. System.Net.Http.HttpRequestException: An error occurred while sending the request. ---> System.Net.WebException: The remote name could not be resolved: 'naccanada.org'
+   at System.Net.HttpWebRequest.EndGetResponse(IAsyncResult asyncResult)
+   at System.Net.Http.HttpClientHandler.GetResponseCallback(IAsyncResult ar)
+   --- End of inner exception stack trace ---
+   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)
+   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   at System.Runtime.CompilerServices.TaskAwaiter`1.GetResult()
+   at yelp.Program.GetSiteContent(String domain, String val)
+2019-11-17 21:38:01.3272|INFO GetSocialFromWebSite for domain valenciacake.com 
+2019-11-17 21:38:07.5610|INFO              GetSocialFromWebSite has no start 
+2019-11-17 21:38:08.4745|INFO GetSiteContent domain: valenciacake.com | val: http:// 
+2019-11-17 21:39:38.2491|INFO              GetSocialFromWebSite finished 
+2019-11-17 22:08:12.7772|INFO Checking email: info@valenciacake.com  |  
+2019-11-17 22:13:37.9184|INFO Checking email: info@valenciacake.com  |  
+2019-11-17 22:16:46.1579|INFO Checking email: info@valenciacake.com  |  
+2019-11-17 22:19:25.9036|INFO Checking email: info@happydazecostumes.com  |  

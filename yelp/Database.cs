@@ -94,6 +94,7 @@ namespace yelp
                 cmd.CommandType = CommandType.Text;
                 cmd.Parameters.Add(new SQLiteParameter("@Domain", domain));
                 cmd.Parameters.Add(new SQLiteParameter("@Facebook", fb));
+                cmd.Parameters.Add(new SQLiteParameter("@UpdateDate", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff")));
                 cmd.ExecuteNonQuery();
                 CloseConnection();
             }
@@ -164,7 +165,7 @@ namespace yelp
             string linkedIn, string seniority, string twitter
                     , string departmntn, string retailType, string address1, string address2, string zipCode)
         {
-            Console.WriteLine($"Writing to DB, Domain{domain}");
+            _logger.Info($"Writing to DB, Domain{domain}");
             SQLiteCommand cmd = new SQLiteCommand(query, _conn);
             OpenConnection();
             cmd.CommandType = CommandType.Text;
@@ -190,6 +191,7 @@ namespace yelp
             cmd.Parameters.Add(new SQLiteParameter("@Address1", address1));
             cmd.Parameters.Add(new SQLiteParameter("@Address2", address2));
             cmd.Parameters.Add(new SQLiteParameter("@ZipCode", zipCode));
+            cmd.Parameters.Add(new SQLiteParameter("@UpdateDate", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff")));
             cmd.ExecuteNonQuery();
             CloseConnection();
         }
@@ -202,6 +204,7 @@ namespace yelp
             cmd.Parameters.Add(new SQLiteParameter("@city", city));
             cmd.Parameters.Add(new SQLiteParameter("@name", name));
             cmd.Parameters.Add(new SQLiteParameter("@category", category));
+            cmd.Parameters.Add(new SQLiteParameter("@UpdateDate", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff")));
             object rows = cmd.ExecuteScalar();
             CloseConnection();
             if (!int.TryParse(rows.ToString(), out int intRow))
@@ -251,6 +254,7 @@ namespace yelp
             cmd.Parameters.Add(new SQLiteParameter("@Position", item.Position));
             cmd.Parameters.Add(new SQLiteParameter("@Seniority", item.Seniority));
             cmd.Parameters.Add(new SQLiteParameter("@Twitter", item.Twitter));
+            cmd.Parameters.Add(new SQLiteParameter("@UpdateDate", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff")));
             cmd.ExecuteNonQuery();
             CloseConnection();
         }
