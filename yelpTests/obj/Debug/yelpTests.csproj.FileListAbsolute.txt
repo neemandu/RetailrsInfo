@@ -59,3 +59,5 @@ C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Newtonsoft.Json.xml
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Refit.xml
 C:\Users\dneeman\source\repos\yelp\yelpTests\obj\Debug\yelpTests.csprojAssemblyReference.cache
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\yelpTests.dll.config
+C:\Projects\RetailrsInfo\yelpTests\bin\Debug\yelpTests.dll.config
+C:\Projects\RetailrsInfo\yelpTests\bin\Debug\System.ValueTuple.dll

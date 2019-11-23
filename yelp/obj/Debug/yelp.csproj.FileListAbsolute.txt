@@ -135,7 +135,6 @@ C:\Projects\RetailrsInfo\yelp\bin\Debug\Refit.xml
 C:\Projects\RetailrsInfo\yelp\bin\Debug\System.Data.SQLite.xml
 C:\Projects\RetailrsInfo\yelp\bin\Debug\System.Data.SQLite.dll.config
 C:\Projects\RetailrsInfo\yelp\bin\Debug\System.Diagnostics.DiagnosticSource.xml
-C:\Projects\RetailrsInfo\yelp\obj\Debug\yelp.csprojAssemblyReference.cache
 C:\Projects\RetailrsInfo\yelp\obj\Debug\yelp.exe.config
 C:\Projects\RetailrsInfo\yelp\obj\Debug\yelp.csproj.CopyComplete
 C:\Projects\RetailrsInfo\yelp\obj\Debug\yelp.exe
@@ -249,3 +248,4 @@ C:\Users\dneeman\source\repos\yelp\yelp\obj\Debug\yelp.csproj.CopyComplete
 C:\Users\dneeman\source\repos\yelp\yelp\obj\Debug\yelp.exe
 C:\Users\dneeman\source\repos\yelp\yelp\obj\Debug\yelp.pdb
 C:\Users\dneeman\source\repos\yelp\yelp\obj\Debug\yelp.csprojAssemblyReference.cache
+C:\Projects\RetailrsInfo\yelp\obj\Debug\yelp.csprojAssemblyReference.cache

@@ -15,19 +15,24 @@ using Yelp.Api.Models;
 
 namespace yelp
 {
+    public class StringConstants
+    {
+        public static readonly string STATUS_GOOD = "GOOD";
+        public static readonly string STATUS_MEDIUM = "MEDIUM";
+        public static readonly string STATUS_BAD = "BAD";
+        public static readonly string CATEGORY_STORE = "STORE";
+        public static readonly string CATEGORY_CHAIN = "CHAIN";
+    }
+
     public class Program
     {
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
-        private static readonly int _hunterLimit = 423;
         static string _hunter_api_key = ConfigurationManager.AppSettings.Get("hunter_api_key");
-        private static int _hunterCtr = 0;
+        private static int _numOfEmailsForChain = 8;
 
         static void Main(string[] args)
         {
-            Test();
-
-
-
+            //Test();
 
             string yelp_api_key = ConfigurationManager.AppSettings.Get("yelp_api_key");
             var yelpClient = new Yelp.Api.Client(yelp_api_key);
@@ -52,7 +57,7 @@ namespace yelp
                             int maxResults = 50;
                             int offset = 0;
 
-                            SearchResponse businesses = GetBusineesesFromYelp(category, maxResults, location, offset); 
+                            SearchResponse businesses = GetBusineesesFromYelp(category, maxResults, location, offset);
                             do
                             {
                                 _logger.Info($"         Found {businesses.Businesses?.Count ?? 0} businesses... offset {offset}");
@@ -62,221 +67,83 @@ namespace yelp
                                     {
                                         try
                                         {
-                                            string str = $"{business.Name} {business.Location.City} {business.Location.State}";
+                                            List<GoogleStoreModel> googleStores = new List<GoogleStoreModel>();
 
-                                            List<DomainCompany> domComPair = df.GetAllWebSites(business.Name, business.Phone, str);
-                                            _logger.Info($"             Found {domComPair.Count} domains in google maps for {str}");
-                                            foreach (var pair in domComPair)
+                                            List<string> placeIdsByPhone = df.GetPlaceIdsByPhone(business.Phone);
+
+                                            if (placeIdsByPhone == null || placeIdsByPhone.Count == 0)
                                             {
-                                                try
+                                                string str = $"{business.Name} {business.Location.City} {business.Location.State}";
+
+                                                List<string> placeIdsBySearchTerm = df.GetPlaceIdsBySearchTerm(str);
+                                                if (placeIdsBySearchTerm == null || placeIdsBySearchTerm.Count == 0)
                                                 {
-
-                                                    _logger.Info($"                 Domain: {pair.Domain} | Company {pair.Company}");
-                                                    // fb and instagram
-                                                    string realdomain = "";
-                                                    string facebook = pair.Domain.Contains("fac") && pair.Domain.Contains("book") ? pair.Domain : "";
-                                                    string insta = pair.Domain.Contains("insta") ? pair.Domain : "";
-                                                    realdomain = string.IsNullOrEmpty(facebook) && string.IsNullOrEmpty(insta) ? pair.Domain : "";
-
-                                                    // get emails
-                                                    List<EmailDetails> emails = new List<EmailDetails>();
-                                                    int numOfEmails = 0;
-                                                    bool areEmailInDb = false;
-                                                    if (domainsEmails.ContainsKey(pair.Domain))
+                                                    InsertYelpDataToDB(business, StringConstants.STATUS_GOOD, db);
+                                                    continue;
+                                                }
+                                                else
+                                                {
+                                                    googleStores = GetGoogleStoresByIds(placeIdsBySearchTerm, df);
+                                                    if (googleStores.Any(item => ArePhonesTheSame(business.Phone, item.Phone)))
                                                     {
-                                                        _logger.Info($"                 Domain: {pair.Domain} is in the cache");
-                                                        emails = domainsEmails[pair.Domain];
+                                                        googleStores = googleStores.Where(item => ArePhonesTheSame(business.Phone, item.Phone)).ToList();
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                googleStores = GetGoogleStoresByIds(placeIdsByPhone, df);
+                                            }
+
+                                            foreach (var googleStore in googleStores)
+                                            {
+                                                if (!IsWebsiteWorking(googleStore.Website))
+                                                {
+                                                    InsertYelpAndGoogleDataToDB(null, null, null, null, null, business,
+                                                        StringConstants.CATEGORY_STORE, StringConstants.STATUS_BAD, business.Phone, db);
+                                                    continue;
+                                                }
+                                                else
+                                                {
+                                                    string domain = df.GetDomainFromUrl(googleStore.Website);
+
+                                                    _logger.Info($"GetSocialFromWebSite: {domain}");
+                                                    GetSocialFromWebSite(domain, out string fb, out string instagram, out List<string> emailsList,
+                                                        out string linkedin, out string twitter, out string phone);
+
+                                                    List<EmailDetails> emails = GetDomainEmailsFromDB(domain, googleStore.Name, db);
+                                                    int numOfEMailsFromHunter = emails?.Count ?? 0;
+                                                    if (emails == null || emails.Count == 0)
+                                                    {
+                                                        (emails, numOfEMailsFromHunter) = GetEmailsFromHunter(domain, googleStore.Name);
+                                                    }
+
+                                                    emails = emails.Where(email => IsEmailGood(email.Email)).ToList();
+
+                                                    if (numOfEMailsFromHunter >= _numOfEmailsForChain)
+                                                    {
+                                                        InsertYelpAndGoogleDataToDB(domain, fb, instagram, linkedin, twitter,  business, 
+                                                            StringConstants.CATEGORY_CHAIN, StringConstants.STATUS_GOOD, phone, db);
                                                     }
                                                     else
                                                     {
-                                                        List<EmailDetails> emailsFromDb = GetDomainEmailsFromDB(realdomain, pair.Company, db);
-                                                        if (emailsFromDb != null && emailsFromDb.Count > 0)
+                                                        string sitePhone = string.IsNullOrEmpty(phone) ? googleStore.Phone : phone;
+                                                        if (ArePhonesTheSame(business.Phone, sitePhone))
                                                         {
-                                                            _logger.Info($"                 Domain: {realdomain} is in the DB");
-                                                            emails = emailsFromDb;
-                                                            areEmailInDb = true;
+                                                            InsertYelpGoogleAndHunterDataToDB(business, googleStore, emails, StringConstants.CATEGORY_STORE, StringConstants.STATUS_GOOD, db);
                                                         }
                                                         else
                                                         {
-                                                            if (_hunterCtr == _hunterLimit)
-                                                            {
-                                                                Exit("Reached manual hunter limit - " + _hunterLimit);
-                                                            }
-                                                            bool isDomainGettingResultsFromHunter = true;
-                                                            _logger.Info($"                 Getting emails from hunter");
-                                                            string url = $"https://api.hunter.io/v2/domain-search?domain={realdomain}&limit=5&api_key={_hunter_api_key}";
-                                                            _logger.Info("                 Searching hunter with url: ");
-                                                            _logger.Info($"                 {url} ");
-
-                                                            string responseBody = "";
-                                                            using (var client = new HttpClient())
-                                                            {
-                                                                var res = client.GetAsync(url).GetAwaiter().GetResult();
-                                                                using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
-                                                                {
-                                                                    responseBody = sr.ReadToEnd();
-                                                                }
-                                                            }
-
-                                                            _logger.Info($"                 hunter response: {responseBody}");
-                                                            JObject o = JObject.Parse(responseBody);
-                                                            var hunter_emails = o["data"]["emails"];
-                                                            emails = CreateEmailListFromHunter(hunter_emails);
-                                                            if(emails == null || emails.Count == 0)
-                                                            {
-                                                                isDomainGettingResultsFromHunter = false;
-                                                                url = $"https://api.hunter.io/v2/domain-search?company={pair.Company}&limit=5&api_key={_hunter_api_key}";
-                                                                _logger.Info("                 Searching hunter with url: ");
-                                                                _logger.Info($"                 {url} ");
-
-                                                                responseBody = "";
-                                                                using (var client = new HttpClient())
-                                                                {
-                                                                    var res = client.GetAsync(url).GetAwaiter().GetResult();
-                                                                    using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
-                                                                    {
-                                                                        responseBody = sr.ReadToEnd();
-                                                                    }
-                                                                }
-
-                                                                _logger.Info($"                 hunter response: {responseBody}");
-                                                                o = JObject.Parse(responseBody);
-                                                                var hunter_emails_comp = o["data"]["emails"];
-                                                                emails = CreateEmailListFromHunter(hunter_emails_comp);
-                                                            }
-                                                            numOfEmails = int.Parse(o["meta"]["results"]?.Value<string>());
-                                                            realdomain = (string.IsNullOrEmpty(realdomain) || !isDomainGettingResultsFromHunter) && !string.IsNullOrWhiteSpace(o["data"]["domain"].Value<string>())
-                                                                ? o["data"]["domain"].Value<string>() : realdomain;
-                                                            _hunterCtr++;
+                                                            InsertYelpDataToDB(business, StringConstants.STATUS_MEDIUM, db);
+                                                            InsertGoogleHunterDataToDB(business, googleStore, emails, StringConstants.STATUS_MEDIUM, db);
                                                         }
                                                     }
-
-
-
-                                                    _logger.Info($"                 Found {emails.Count()} emails for domain: {realdomain} | company: {pair.Company}");
-
-                                                    List<string> emailAddrs = new List<string>();
-                                                    string linkedinadd = "";
-                                                    string twitt = "";
-                                                    if (!string.IsNullOrEmpty(realdomain))
-                                                    {
-                                                        _logger.Info($"                 GetSocialFromWebSite: {realdomain}");
-                                                        GetSocialFromWebSite(realdomain, out string fb, out string instagram, out List<string> emailsList,
-                                                            out string linkedin, out string twitter);
-                                                        emailAddrs = emailsList;
-                                                        linkedinadd = linkedin;
-                                                        twitt = twitter;
-                                                        facebook = string.IsNullOrEmpty(fb) ? facebook : fb;
-                                                        insta = string.IsNullOrEmpty(instagram) ? insta : instagram;
-                                                    }
-                                                    _logger.Info("                 Iterating emails from website");
-                                                    if (!domainsEmails.ContainsKey(pair.Domain))
-                                                    {
-                                                        if (!areEmailInDb)
-                                                        {
-                                                            List<EmailDetails> goodEmails = new List<EmailDetails>();
-                                                            foreach (var em in emails)
-                                                            {
-                                                                if (IsEmailGood(em.Email))
-                                                                {
-                                                                    goodEmails.Add(em);
-                                                                    AddEmailToDb(pair.Domain, pair.Company, em, db);
-                                                                }
-                                                            }
-                                                            _logger.Info($"                 Good emails: {goodEmails.Count} / {emails.Count}");
-
-                                                            emails = goodEmails;
-
-                                                        }
-
-                                                        domainsEmails.Add(pair.Domain, emails);
-
-                                                    }
-
-                                                    foreach (string m in emailAddrs)
-                                                    {
-                                                        if (!emails.Any(mai => mai.Email == m))
-                                                        {
-                                                            emails.Add(new EmailDetails
-                                                            {
-                                                                Email = m
-                                                            });
-                                                        }
-                                                    }
-
-
-
-                                                    int emailCounter = 0;
-                                                    DeleteRecordsInDb(pair.Domain, db);
-                                                    foreach (var i in emails)
-                                                    {
-                                                        emailCounter++;
-                                                        _logger.Info($"                 Adding record to DB {i.Email}");
-                                                        AddRecordToDb(new yelp.Details
-                                                        {
-                                                            Domain = pair.Domain,
-                                                            Email = i.Email,
-                                                            FirstName = i.FirstName,
-                                                            LastName = i.LastName,
-                                                            Position = i.Position,
-                                                            LinkedIn = i.LinkedIn,
-                                                            Twitter = i.Twitter,
-                                                            Seniority = i.Seniority,
-                                                            City = business.Location.City,
-                                                            State = business.Location.State,
-                                                            Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
-                                                            StoreName = pair.Company,
-                                                            Phone = string.IsNullOrEmpty(business.Phone) ? i.Phone : business.Phone,
-                                                            Facebook = facebook,
-                                                            Rating = business.Rating,
-                                                            Reviewers = business.ReviewCount,
-                                                            Instagram = insta,
-                                                            Departmnt = i.Departmnt,
-                                                            RetailsType = numOfEmails > 8 ? "Chain" : "Store",
-                                                            Address1 = business.Location.Address1,
-                                                            Address2 = business.Location.Address2,
-                                                            ZipCode = business.Location.ZipCode
-                                                        }, db);
-                                                    }
-
-                                                    if (emailCounter == 0)
-                                                    {
-                                                        AddRecordToDb(new yelp.Details
-                                                        {
-                                                            Domain = pair.Domain,
-                                                            Email = null,
-                                                            FirstName = null,
-                                                            LastName = null,
-                                                            Position = null,
-                                                            LinkedIn = linkedinadd,
-                                                            Twitter = twitt,
-                                                            Seniority = null,
-                                                            City = business.Location.City,
-                                                            State = business.Location.State,
-                                                            Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
-                                                            StoreName = pair.Company,
-                                                            Phone = business.Phone,
-                                                            Facebook = facebook,
-                                                            Rating = business.Rating,
-                                                            Reviewers = business.ReviewCount,
-                                                            Instagram = insta,
-                                                            Departmnt = null,
-                                                            RetailsType = numOfEmails > 8 ? "Chain" : "Store",
-                                                            Address1 = business.Location.Address1,
-                                                            Address2 = business.Location.Address2,
-                                                            ZipCode = business.Location.ZipCode
-                                                        }, db);
-                                                    }
-                                                }
-                                                catch (Exception x)
-                                                {
-                                                    _logger.Error(x, $"domain : {pair.Domain}  | company : {pair.Company}");
                                                 }
                                             }
                                         }
-                                        catch (Exception x)
+                                        catch (Exception ex)
                                         {
-                                            _logger.Error(x, "");
+                                            _logger.Error(ex, "");
                                         }
                                     }
                                     offset += 50;
@@ -293,7 +160,225 @@ namespace yelp
                 { _logger.Error(x, ""); }
             }
             _logger.Info("FINISH");
-            
+
+        }
+
+        private static void InsertYelpAndGoogleDataToDB(string domain, string fb, string instagram, string linkedin, string twitter,
+            BusinessResponse business, string category, string status,string phone, Database db)
+        {
+            AddRecordToDb(new yelp.Details
+            {
+                Domain = domain,
+                Email = null,
+                FirstName = null,
+                LastName = null,
+                Position = null,
+                LinkedIn = linkedin,
+                Twitter = twitter,
+                Seniority = null,
+                City = business.Location.City,
+                State = business.Location.State,
+                Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
+                StoreName = business.Name,
+                Phone = phone,
+                Facebook = fb,
+                Rating = business.Rating,
+                Reviewers = business.ReviewCount,
+                Instagram = instagram,
+                Departmnt = null,
+                RetailsType = category,
+                Address1 = business.Location.Address1,
+                Address2 = business.Location.Address2,
+                ZipCode = business.Location.ZipCode,
+                InfoQuality = status
+            }, db);
+        }
+
+        private static void InsertYelpGoogleAndHunterDataToDB(BusinessResponse business, GoogleStoreModel googleStore, 
+            List<EmailDetails> emails, string category, string status, Database db)
+        {
+            foreach (var email in emails)
+            {
+                AddRecordToDb(new yelp.Details
+                {
+                    YelpUrl = business.Url,
+                    Domain = googleStore.Website,
+                    Email = email.Email,
+                    FirstName = email.FirstName,
+                    LastName = email.LastName,
+                    Position = email.Position,
+                    LinkedIn = email.LinkedIn,
+                    Twitter = email.Twitter,
+                    Seniority = email.Seniority,
+                    City = business.Location.City,
+                    State = business.Location.State,
+                    Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
+                    StoreName = business.Name,
+                    Phone = business.Phone,
+                    Facebook = null,
+                    Rating = business.Rating,
+                    Reviewers = business.ReviewCount,
+                    Instagram = null,
+                    Departmnt = email.Departmnt,
+                    RetailsType = category,
+                    Address1 = business.Location.Address1,
+                    Address2 = business.Location.Address2,
+                    ZipCode = business.Location.ZipCode,
+                    InfoQuality = status
+                }, db);
+            }
+        }
+
+        private static void InsertGoogleHunterDataToDB(BusinessResponse business, GoogleStoreModel googleStore, List<EmailDetails> emails, string status, Database db)
+        {
+            foreach(var email in emails)
+            {
+                AddRecordToDb(new yelp.Details
+                {
+                    YelpUrl = null,
+                    Domain = googleStore.Website,
+                    Email = email.Email,
+                    FirstName = email.FirstName,
+                    LastName = email.LastName,
+                    Position = email.Position,
+                    LinkedIn = email.LinkedIn,
+                    Twitter = email.Twitter,
+                    Seniority = email.Seniority,
+                    City = business.Location.City,
+                    State = business.Location.State,
+                    Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
+                    StoreName = googleStore.Name,
+                    Phone = googleStore.Phone,
+                    Facebook = null,
+                    Rating = -1,
+                    Reviewers = -1,
+                    Instagram = null,
+                    Departmnt = email.Departmnt,
+                    RetailsType = (emails?.Count ?? 0) >= _numOfEmailsForChain ? StringConstants.CATEGORY_CHAIN : StringConstants.CATEGORY_STORE,
+                    Address1 = business.Location.Address1,
+                    Address2 = business.Location.Address2,
+                    ZipCode = business.Location.ZipCode,
+                    InfoQuality = status
+                }, db);
+            }
+        }
+
+        private static (List<EmailDetails>, int) GetEmailsFromHunter(string domain, string companyName)
+        {
+            string url = $"https://api.hunter.io/v2/domain-search?domain={domain}&limit=5&api_key={_hunter_api_key}";
+            _logger.Info("Searching hunter with domain: " + domain);
+            _logger.Info($"{url}");
+
+            string responseBody = "";
+            using (var client = new HttpClient())
+            {
+                var res = client.GetAsync(url).GetAwaiter().GetResult();
+                using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
+                {
+                    responseBody = sr.ReadToEnd();
+                }
+            }
+
+            _logger.Info($"hunter response: {responseBody}");
+            JObject o = JObject.Parse(responseBody);
+            var hunter_emails = o["data"]["emails"];
+            var emails = CreateEmailListFromHunter(hunter_emails);
+            if (emails == null || emails.Count == 0)
+            {
+                url = $"https://api.hunter.io/v2/domain-search?company={companyName}&limit=5&api_key={_hunter_api_key}";
+                _logger.Info("Searching hunter with company name: " + companyName);
+
+                responseBody = "";
+                using (var client = new HttpClient())
+                {
+                    var res = client.GetAsync(url).GetAwaiter().GetResult();
+                    using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
+                    {
+                        responseBody = sr.ReadToEnd();
+                    }
+                }
+
+                _logger.Info($"hunter response: {responseBody}");
+                o = JObject.Parse(responseBody);
+                var hunter_emails_comp = o["data"]["emails"];
+                emails = CreateEmailListFromHunter(hunter_emails_comp);
+                
+            }
+            int numOfEmails = int.Parse(o["meta"]["results"]?.Value<string>());
+            return (emails, numOfEmails);
+        }
+
+        private static bool IsWebsiteWorking(string website)
+        {
+            if (website == null)
+                return false;
+            using (var client = new HttpClient())
+            {
+                var res = client.GetAsync(website).GetAwaiter().GetResult();
+                if (res.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static List<GoogleStoreModel> GetGoogleStoresByIds(List<string> placeIdsBySearchTerm, DomainFinder df)
+        {
+            List<GoogleStoreModel> ret = new List<GoogleStoreModel>();
+            foreach (var placeId in placeIdsBySearchTerm.Take(3))
+            {
+                var store = df.GetGoogleStoreByPlaceId(placeId);
+                ret.Add(store);
+            }
+            return ret;
+        }
+
+        private static bool ArePhonesTheSame(string phone1, string phone2)
+        {
+            string p1 = phone1;
+            if(p1.Length > 10)
+            {
+                p1 = phone1.Substring(phone1.Length - 10, phone1.Length);
+            }
+            string p2 = phone2;
+            if (p2.Length > 10)
+            {
+                p2 = phone2.Substring(phone2.Length - 10, phone2.Length);
+            }
+            return ((p1?.Replace("+", "")?.Replace("-", "")?.Replace("(", "")?.Replace(")", "")?.Replace(" ", "")?.Trim() ?? "")
+                     == (p2?.Replace("+", "")?.Replace("-", "")?.Replace("(", "")?.Replace(")", "")?.Replace(" ", "")?.Trim() ?? "z"));
+        }
+
+        private static void InsertYelpDataToDB(BusinessResponse business, string status, Database db)
+        {
+            AddRecordToDb(new yelp.Details
+            {
+                Domain = null,
+                Email = null,
+                FirstName = null,
+                LastName = null,
+                Position = null,
+                LinkedIn = null,
+                Twitter = null,
+                Seniority = null,
+                City = business.Location.City,
+                State = business.Location.State,
+                Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
+                StoreName = business.Name,
+                Phone = business.Phone,
+                Facebook = null,
+                Rating = business.Rating,
+                Reviewers = business.ReviewCount,
+                Instagram = null,
+                Departmnt = null,
+                RetailsType = StringConstants.CATEGORY_STORE,
+                Address1 = business.Location.Address1,
+                Address2 = business.Location.Address2,
+                ZipCode = business.Location.ZipCode,
+                InfoQuality = status
+            }, db);
         }
 
         private static void Test()
@@ -411,7 +496,7 @@ namespace yelp
             var yelpRes = yelpClient.SearchBusinessesAllAsync(request).Result;
 
             List<SmallTypeStoreModel> resLst = new List<SmallTypeStoreModel>();
-            foreach(var bs in yelpRes.Businesses)
+            foreach (var bs in yelpRes.Businesses)
             {
                 resLst.Add(new SmallTypeStoreModel
                 {
@@ -580,7 +665,7 @@ namespace yelp
         }
 
         public static void GetSocialFromWebSite(string domain, out string fb, out string instagram,
-            out List<string> emailsList, out string linkedin, out string twitter)
+            out List<string> emailsList, out string linkedin, out string twitter, out string phone)
         {
             _logger.Info($"GetSocialFromWebSite for domain {domain}");
             fb = "";
@@ -588,17 +673,18 @@ namespace yelp
             emailsList = new List<string>();
             linkedin = "";
             twitter = "";
+            phone = "";
             string responseBody = "";
             try
             {
                 if (domain.Contains("http") || domain.Contains("https") || domain.Contains("www"))
                 {
                     _logger.Info("             GetSocialFromWebSite has start");
-                    responseBody = GetResponse(domain);                    
+                    responseBody = GetResponse(domain);
                 }
                 else
                 {
-                    _logger.Info("             GetSocialFromWebSite has no start");
+                    _logger.Info("GetSocialFromWebSite has no start");
                     responseBody = GetSiteContent(domain, "http://");
                     if (string.IsNullOrEmpty(responseBody))
                         responseBody = GetSiteContent(domain, "https://");
@@ -609,10 +695,10 @@ namespace yelp
                 }
                 if (!string.IsNullOrEmpty(responseBody))
                 {
-                    GetSocialsFromWebSite(responseBody, ref fb, ref instagram, ref emailsList, ref linkedin, ref twitter);
+                    GetSocialsFromWebSite(responseBody, ref fb, ref instagram, ref emailsList, ref linkedin, ref twitter, ref phone);
                 }
 
-                _logger.Info("             GetSocialFromWebSite finished");
+                _logger.Info("GetSocialFromWebSite finished");
             }
             catch (Exception e)
             {
@@ -620,7 +706,7 @@ namespace yelp
             }
         }
 
-        private static void GetSocialsFromWebSite(string responseBody, ref string fb, ref string instagram, ref List<string> emailsList, ref string linkedin, ref string twitter)
+        private static void GetSocialsFromWebSite(string responseBody, ref string fb, ref string instagram, ref List<string> emailsList, ref string linkedin, ref string twitter, ref string phone)
         {
             string fbregex = @"(?:(?:http|https):\/\/)?(?:www.)?facebook.com\/(?:(?:\w)*#!\/)?(?:pages\/)?(?:[?\w\-]*\/)?(?:profile.php\?id=(?=\d.*))?([\w\-]*)?";
             var lst = GetMatchedList(responseBody, fbregex);
@@ -655,6 +741,10 @@ namespace yelp
             {
                 twitter = GetCorrectSocial(lst);
             }
+
+            string phoneregex = @">([+]{0,1}[0-9]{0,3}[ .-]{0,1}[(]{0,1}[0-9]{3}[)]{0,1}[ .-]{0,1}[0-9]{3}[ .-]{0,1}[0-9]{4})";
+            phone = GetMatched(responseBody, phoneregex);
+            phone = phone.Replace(">", "").Replace("+", "")?.Replace("-", "")?.Replace("(", "")?.Replace(")", "")?.Replace(" ", "")?.Trim();
         }
 
         private static string GetResponse(string domain)
@@ -675,7 +765,7 @@ namespace yelp
         private static string GetCorrectSocial(List<string> lst)
         {
             string correct = null;
-            foreach(string item in lst)
+            foreach (string item in lst)
             {
                 using (var client = new HttpClient())
                 {
@@ -816,7 +906,7 @@ namespace yelp
 "Middletown, NY",
 "Mount Vernon, NY",
 "New Rochelle, NY",
-//"New York, NY",
+"New York, NY",
 "Newburgh, NY",
 "Niagara Falls, NY",
 "North Tonawanda, NY",
@@ -881,12 +971,14 @@ namespace yelp
                             @ZipCode,
                             @Address1,
                             @Address2,
-                            @UpdateDate
+                            @UpdateDate,
+                            @YelpUrl,
+                            @InfoQuality
                             )";
                 db.ExecuteNonQuery(query, details.Domain, details.Category, details.StoreName, details.City
                     , details.State, details.Email, details.FirstName, details.LastName, details.Phone, details.Facebook,
                     details.Rating, details.Reviewers, details.Instagram, details.Position, details.LinkedIn, details.Seniority, details.Twitter
-                    , details.Departmnt, details.RetailsType, details.Address1, details.Address2, details.ZipCode);
+                    , details.Departmnt, details.RetailsType, details.Address1, details.Address2, details.ZipCode, details.YelpUrl, details.InfoQuality);
             }
             catch (Exception ex)
             {

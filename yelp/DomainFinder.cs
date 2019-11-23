@@ -231,7 +231,7 @@ namespace yelp
             return ret;
         }
 
-        private string GetDomainFromUrl(string url)
+        public string GetDomainFromUrl(string url)
         {
             string regex = @"(?:\/\/|[^\/]+)*";
 

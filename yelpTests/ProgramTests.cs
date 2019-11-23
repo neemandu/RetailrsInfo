@@ -22,7 +22,7 @@ namespace yelp.Tests
         public void GetSocialFromWebSiteTest()
         {
             Program.GetSocialFromWebSite("partytime-rentals.com", out string fb, out string instagram,
-                out List<string> emailList, out string linkedin, out string twitter);
+                out List<string> emailList, out string linkedin, out string twitter, out string phone);
         }
     }
 }

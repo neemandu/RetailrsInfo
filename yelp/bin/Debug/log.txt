@@ -18932,3 +18932,23 @@
 2019-11-21 23:18:58.5718|INFO          Found 9 businesses... offset 0 
 2019-11-22 00:16:36.3230|INFO Exploring Albany, NY 
 2019-11-22 00:16:36.3640|INFO      Category: partysupplies 
+2019-11-24 00:31:57.9770|INFO Exploring Albany, NY 
+2019-11-24 00:32:02.3602|INFO      Category: partysupplies 
+2019-11-24 00:32:15.1317|INFO          Found 9 businesses... offset 0 
+2019-11-24 00:33:16.1333|ERROR StartIndex cannot be less than zero.
+Parameter name: startIndex System.ArgumentOutOfRangeException: StartIndex cannot be less than zero.
+Parameter name: startIndex
+   at System.String.Substring(Int32 startIndex, Int32 length)
+   at System.String.Substring(Int32 startIndex)
+   at yelp.Program.GetDomain(String url, String& domain) in C:\Projects\RetailrsInfo\yelp\Program.cs:line 1083
+2019-11-24 00:36:53.1295|INFO Exploring Albany, NY 
+2019-11-24 00:36:53.2125|INFO      Category: partysupplies 
+2019-11-24 00:36:56.8085|INFO          Found 9 businesses... offset 0 
+2019-11-24 00:37:10.2099|INFO GetSocialFromWebSite: whalentent.com 
+2019-11-24 00:37:13.7864|INFO GetSocialFromWebSite for domain whalentent.com 
+2019-11-24 00:37:13.8114|INFO GetSocialFromWebSite has no start 
+2019-11-24 00:37:13.9034|INFO GetSiteContent domain: whalentent.com | val: http:// 
+2019-11-24 00:37:14.3454|INFO GetSiteContent domain: whalentent.com | val: https:// 
+2019-11-24 00:37:15.0758|INFO GetSiteContent domain: whalentent.com | val: http://www. 
+2019-11-24 00:37:19.1325|INFO GetSocialFromWebSite finished 
+2019-11-24 00:38:28.0666|INFO Checking email: info@whalentent.com  |  

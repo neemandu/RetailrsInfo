@@ -8,7 +8,7 @@ namespace yelp
 {
     public class Details
     {
-        //public string yelpUrl { get; set; }
+        public string YelpUrl { get; set; }
         public string Domain { get; set; }
         public string Category { get; set; }
         public string StoreName { get; set; }
@@ -31,5 +31,6 @@ namespace yelp
         public string Address1 { get; internal set; }
         public string Address2 { get; internal set; }
         public string ZipCode { get; internal set; }
+        public string InfoQuality { get; set; }
     }
 }

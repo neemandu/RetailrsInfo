@@ -163,7 +163,7 @@ namespace yelp
             string state, string email, string firstName, string lastName, string phone, string facebook, float rating,
             float reviwers, string instagram, string position,
             string linkedIn, string seniority, string twitter
-                    , string departmntn, string retailType, string address1, string address2, string zipCode)
+                    , string departmntn, string retailType, string address1, string address2, string zipCode, string yelpUrl, string infoQuality)
         {
             _logger.Info($"Writing to DB, Domain - {domain}");
             SQLiteCommand cmd = new SQLiteCommand(query, _conn);
@@ -191,6 +191,8 @@ namespace yelp
             cmd.Parameters.Add(new SQLiteParameter("@Address1", address1));
             cmd.Parameters.Add(new SQLiteParameter("@Address2", address2));
             cmd.Parameters.Add(new SQLiteParameter("@ZipCode", zipCode));
+            cmd.Parameters.Add(new SQLiteParameter("@YelpUrl", yelpUrl));
+            cmd.Parameters.Add(new SQLiteParameter("@InfoQuality", infoQuality));
             cmd.Parameters.Add(new SQLiteParameter("@UpdateDate", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff")));
             cmd.ExecuteNonQuery();
             CloseConnection();
