@@ -18927,3 +18927,8 @@
 2019-11-18 13:15:16.6807|INFO              Found 0 placesIds from google maps api for Karaoke Girl Brooklyn NY 
 2019-11-18 13:15:16.6807|INFO              Found 0 domains in google maps for Karaoke Girl Brooklyn NY 
 2019-11-18 13:15:16.9809|INFO FINISH 
+2019-11-21 23:18:56.2525|INFO Exploring Albany, NY 
+2019-11-21 23:18:56.2856|INFO      Category: partysupplies 
+2019-11-21 23:18:58.5718|INFO          Found 9 businesses... offset 0 
+2019-11-22 00:16:36.3230|INFO Exploring Albany, NY 
+2019-11-22 00:16:36.3640|INFO      Category: partysupplies 

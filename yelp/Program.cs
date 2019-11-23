@@ -24,6 +24,11 @@ namespace yelp
 
         static void Main(string[] args)
         {
+            Test();
+
+
+
+
             string yelp_api_key = ConfigurationManager.AppSettings.Get("yelp_api_key");
             var yelpClient = new Yelp.Api.Client(yelp_api_key);
             Database db = new Database();
@@ -42,18 +47,12 @@ namespace yelp
                     foreach (string category in categories)
                     {
                         _logger.Info($"     Category: {category}");
-                        int offset = 0;
                         try
                         {
-                            var request = new Yelp.Api.Models.SearchRequest
-                            {
-                                Categories = category,
-                                MaxResults = 50,
-                                Location = location,
-                                ResultsOffset = offset
-                            };
+                            int maxResults = 50;
+                            int offset = 0;
 
-                            var businesses = yelpClient.SearchBusinessesAllAsync(request).Result;
+                            SearchResponse businesses = GetBusineesesFromYelp(category, maxResults, location, offset); 
                             do
                             {
                                 _logger.Info($"         Found {businesses.Businesses?.Count ?? 0} businesses... offset {offset}");
@@ -281,8 +280,7 @@ namespace yelp
                                         }
                                     }
                                     offset += 50;
-                                    request.ResultsOffset = offset;
-                                    businesses = yelpClient.SearchBusinessesAllAsync(request).Result;
+                                    businesses = GetBusineesesFromYelp(category, maxResults, location, offset);
                                 }
                             }
                             while ((businesses?.Businesses?.Count ?? 0) > 0);
@@ -296,6 +294,135 @@ namespace yelp
             }
             _logger.Info("FINISH");
             
+        }
+
+        private static void Test()
+        {
+            string location = "New York, NY";
+            string category = "partysupplies";
+            var yelpResults = yelp.Program.GetBusineesesFromYelpSmallTypeStore(category, 50, location, 0);
+
+            DomainFinder df = new DomainFinder();
+
+            List<string> storesByNameNotByPhone = new List<string>();
+            List<string> storesByPhoneNotByName = new List<string>();
+            foreach (var business in yelpResults)
+            {
+                string searchTerm = $"{business.Name} {business.City} {business.State}";
+                List<string> placeIdsBySearchTerm = df.GetPlaceIdsBySearchTerm(searchTerm);
+                List<GoogleStoreModel> googleNameResults = new List<GoogleStoreModel>();
+                foreach (var place in placeIdsBySearchTerm)
+                {
+                    var store = df.GetGoogleStoreByPlaceId(place);
+                    googleNameResults.Add(store);
+                }
+
+
+                string phone = business.Phone;
+                var phoneStorePlaceIds = df.GetPlaceIdsByPhone(phone.Replace("+", ""));
+                List<GoogleStoreModel> googlePhoneRs = new List<GoogleStoreModel>();
+                foreach (var place in phoneStorePlaceIds)
+                {
+                    var store = df.GetGoogleStoreByPlaceId(place);
+                    googlePhoneRs.Add(store);
+                }
+
+
+                Console.WriteLine($"YELP - Store name: {business.Name} | City: {business.City} | State: {business.State}");
+                Console.WriteLine($"Google by search term: {googleNameResults.Count} items | Google by phone: {googlePhoneRs.Count} items");
+
+                if (googleNameResults == null || googleNameResults.Count == 0)
+                {
+                    Console.WriteLine($"Google by search term - NOT FOUND!!!");
+                }
+                else
+                {
+                    Console.WriteLine($"Google by search term results ({googleNameResults.Count} items):");
+                    foreach (var place in googleNameResults)
+                    {
+                        Console.WriteLine($"    Store name: {place.Name} | Phone: {place.Phone} | Website: {place.Website}");
+                    }
+                }
+                if (googlePhoneRs == null || googlePhoneRs.Count == 0)
+                {
+                    Console.WriteLine($"Google by phone - NOT FOUND!!!");
+                }
+                else
+                {
+                    Console.WriteLine($"Google by phone results ({googlePhoneRs.Count} items):");
+                    foreach (var place in googlePhoneRs)
+                    {
+                        Console.WriteLine($"    Store name: {place.Name} | Phone: {place.Phone} | Website: {place.Website}");
+                    }
+                }
+
+                if (googleNameResults != null && googleNameResults.Count > 0 &&
+                    (googlePhoneRs == null || googlePhoneRs.Count == 0))
+                {
+                    storesByNameNotByPhone.Add(business.Name);
+                }
+
+                if (googlePhoneRs != null && googlePhoneRs.Count > 0 &&
+                    (googleNameResults == null || googleNameResults.Count == 0))
+                {
+                    storesByPhoneNotByName.Add(business.Name);
+                }
+            }
+            Console.WriteLine($"************************************************************");
+            Console.WriteLine($"******************                     *********************");
+            Console.WriteLine($"******************      Statistics     *********************");
+            Console.WriteLine($"******************                     *********************");
+            Console.WriteLine($"************************************************************");
+            Console.WriteLine();
+            Console.WriteLine($"Out of {yelpResults.Count} Businesses:");
+            Console.WriteLine($"Stores By Phone Not By Name: {storesByPhoneNotByName.Count} | Stores By Name Not By Phone: {storesByNameNotByPhone.Count}");
+            Console.Read();
+
+            Environment.Exit(1);
+        }
+
+        public static SearchResponse GetBusineesesFromYelp(string category, int maxResults, string location, int offset)
+        {
+            var request = new SearchRequest
+            {
+                Categories = category,
+                MaxResults = maxResults,
+                Location = location,
+                ResultsOffset = offset
+            };
+
+            string yelp_api_key = ConfigurationManager.AppSettings.Get("yelp_api_key");
+            var yelpClient = new Yelp.Api.Client(yelp_api_key);
+            return yelpClient.SearchBusinessesAllAsync(request).Result;
+        }
+
+        public static List<SmallTypeStoreModel> GetBusineesesFromYelpSmallTypeStore(string category, int maxResults, string location, int offset)
+        {
+            var request = new SearchRequest
+            {
+                Categories = category,
+                MaxResults = maxResults,
+                Location = location,
+                ResultsOffset = offset
+            };
+
+            string yelp_api_key = ConfigurationManager.AppSettings.Get("yelp_api_key");
+            var yelpClient = new Yelp.Api.Client(yelp_api_key);
+            var yelpRes = yelpClient.SearchBusinessesAllAsync(request).Result;
+
+            List<SmallTypeStoreModel> resLst = new List<SmallTypeStoreModel>();
+            foreach(var bs in yelpRes.Businesses)
+            {
+                resLst.Add(new SmallTypeStoreModel
+                {
+                    City = bs.Location.City,
+                    Name = bs.Name,
+                    State = bs.Location.State,
+                    Phone = bs.Phone
+                });
+            }
+
+            return resLst;
         }
 
         public static void Exit(string finishRsn)

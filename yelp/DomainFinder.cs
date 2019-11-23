@@ -21,18 +21,55 @@ namespace yelp
         private readonly GoogleApiSettings _settings;
         private readonly GooglePlacesApiService _service;
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
+        private readonly string _google_api_key;
         public DomainFinder()
         {
-            string api_key = ConfigurationManager.AppSettings.Get("google_api");
+            _google_api_key = ConfigurationManager.AppSettings.Get("google_api");
             _settings = GoogleApiSettings.Builder
-                                            .WithApiKey(api_key)
+                                            .WithApiKey(_google_api_key)
                                             .WithType(PlaceTypes.Establishment)
                         .WithDetailLevel(DetailLevel.Contact)
                         .Build();
             _service = new GooglePlacesApiService(_settings);
         }
 
-        private List<string> GetPlaceIds(string searchTerm)
+        public List<string> GetPlaceIdsByPhone(string phone)
+        {
+            try
+            {
+                Thread.Sleep(200);
+                string googlePhoneUrl = $"https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=%2B{phone}&inputtype=phonenumber&fields=place_id&key={_google_api_key}";
+
+                string responseBody = "";
+                using (var client = new HttpClient())
+                {
+                    var res = client.GetAsync(googlePhoneUrl).GetAwaiter().GetResult();
+
+                    if (res.IsSuccessStatusCode)
+                    {
+                        using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
+                        {
+                            responseBody = sr.ReadToEnd();
+                        }
+
+                        JObject o = JObject.Parse(responseBody);
+
+                        JToken[] array = o["candidates"].ToArray();
+
+                        return array.Select(item => item["place_id"].ToString()).ToList();
+                    }
+                    
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "GetPlaceIds: phone: " + phone);
+            }
+            return new List<string>();
+        }
+
+        public List<string> GetPlaceIdsBySearchTerm(string searchTerm)
         {
             try
             {
@@ -75,51 +112,33 @@ namespace yelp
                 //           searchTerm = "Alicia's Jewelers Bayside NY";
 
 
-                List<string> placeIds = GetPlaceIds(searchTerm);
+                List<string> placeIds = GetPlaceIdsBySearchTerm(searchTerm);
                 List<string> domains = new List<string>();
                 _logger.Info($"             Found {placeIds.Count} placesIds from google maps api for {searchTerm}");
                 foreach (var placeId in placeIds)
                 {
                     Thread.Sleep(200);
-                    string url = $"https://maps.googleapis.com/maps/api/place/details/json?place_id={placeId}&key=AIzaSyD6Fi3_OAslSsgOQzdJxmQS0TrP2hpdtBw";
-                    string responseBody = "";
-
+                    GoogleStoreModel store = GetGoogleStoreByPlaceId(placeId);
                     bool isGoodCall = true;
-                    using (var httpClient = new HttpClient())
-                    {
-                        var res = httpClient.GetAsync(url).GetAwaiter().GetResult();
-                        if (!res.IsSuccessStatusCode)
-                        {
-                            _logger.Error("             url: " + url);
-                            _logger.Error($"             Bad response from google api : {res.StatusCode} | {res.Content}");
-                            isGoodCall = false;
-                        }
-                        else
-                        {
-                            using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
-                            {
-                                responseBody = sr.ReadToEnd();
-                            }
-                        }
-                    }
-                    JObject o = JObject.Parse(responseBody);
+                    if(store == null)
+                        isGoodCall = false;
 
-                    string name = o["result"]["name"].ToString();
+                    string name = store.Name;
                     if (!isGoodCall)
                         continue;
 
 
                     
                     bool isStore = false;
-                    for (var i = 0; i < o["result"]["types"].Count() && !isStore; i++)
+                    if(store.Types.Contains("establishment") ||
+                        store.Types.Contains("store"))
                     {
-                        if (o["result"]["types"][i].ToString() == "store" ||
-                            o["result"]["types"][i].ToString() == "establishment")
-                            isStore = true;
+                        isStore = true;
                     }
+
                     if (isStore)
                     {
-                        var googlePhone = o["result"]["international_phone_number"]?.ToString() ?? "";
+                        var googlePhone = store.Phone;
                         if (!string.IsNullOrEmpty(googlePhone) && !string.IsNullOrEmpty(phone))
                         {
                             googlePhone = googlePhone.Replace("+", "").Replace("-", "").Replace("(", "").Replace(")", "").Replace(" ", "").Trim();
@@ -129,7 +148,7 @@ namespace yelp
                                 continue;
                         }
                         
-                        var website = o["result"]["website"];
+                        var website = store.Website;
                         if (!string.IsNullOrEmpty(website?.ToString()))
                         {
                             try
@@ -140,7 +159,7 @@ namespace yelp
                                     if (res.IsSuccessStatusCode)
                                     {
                                         string dom = GetDomainFromUrl(website.ToString());
-                                        string company = o["result"]["name"].ToString();
+                                        string company = store.Name.ToString();
                                         if (!domainsDict.ContainsKey(dom))
                                         {
                                             domainsDict.Add(dom, company);
@@ -171,6 +190,45 @@ namespace yelp
                 _logger.Error(x, "");
                 return new List<DomainCompany>();
             }
+        }
+
+        public GoogleStoreModel GetGoogleStoreByPlaceId(string placeId)
+        {
+            GoogleStoreModel ret = new GoogleStoreModel();
+            string url = $"https://maps.googleapis.com/maps/api/place/details/json?place_id={placeId}&key=AIzaSyD6Fi3_OAslSsgOQzdJxmQS0TrP2hpdtBw";
+            string responseBody = "";
+
+
+            using (var httpClient = new HttpClient())
+            {
+                var res = httpClient.GetAsync(url).GetAwaiter().GetResult();
+                if (!res.IsSuccessStatusCode)
+                {
+                    _logger.Error("             url: " + url);
+                    _logger.Error($"             Bad response from google api : {res.StatusCode} | {res.Content}");
+                    return null;
+                }
+                else
+                {
+                    using (var sr = new StreamReader(res.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
+                    {
+                        responseBody = sr.ReadToEnd();
+                    }
+                }
+            }
+            JObject o = JObject.Parse(responseBody);
+            ret.Name = o["result"]["name"].ToString();
+            ret.Types = new List<string>();
+            for (var i = 0; i < o["result"]["types"].Count(); i++)
+            {
+                ret.Types.Add(o["result"]["types"][i].ToString());
+            }
+
+            ret.Phone = o["result"]["international_phone_number"]?.ToString() ?? "";
+
+            ret.Website = o["result"]["website"]?.ToString() ?? "";
+
+            return ret;
         }
 
         private string GetDomainFromUrl(string url)

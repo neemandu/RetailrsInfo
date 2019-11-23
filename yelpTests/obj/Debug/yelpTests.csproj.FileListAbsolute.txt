@@ -46,7 +46,6 @@ C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\GooglePlacesApi.Abstracti
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\GooglePlacesApi.dll
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Newtonsoft.Json.dll
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\System.Net.Http.dll
-C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Yelp.Api.dll
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Refit.dll
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Microsoft.VisualStudio.TestPlatform.TestFramework.xml
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.xml
@@ -59,3 +58,4 @@ C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\System.Data.SQLite.dll.co
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Newtonsoft.Json.xml
 C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\Refit.xml
 C:\Users\dneeman\source\repos\yelp\yelpTests\obj\Debug\yelpTests.csprojAssemblyReference.cache
+C:\Users\dneeman\source\repos\yelp\yelpTests\bin\Debug\yelpTests.dll.config
