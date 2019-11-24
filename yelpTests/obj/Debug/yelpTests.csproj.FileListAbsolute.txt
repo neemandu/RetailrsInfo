@@ -13,7 +13,6 @@ C:\Projects\RetailrsInfo\yelpTests\bin\Debug\GooglePlacesApi.Abstractions.dll
 C:\Projects\RetailrsInfo\yelpTests\bin\Debug\GooglePlacesApi.dll
 C:\Projects\RetailrsInfo\yelpTests\bin\Debug\Newtonsoft.Json.dll
 C:\Projects\RetailrsInfo\yelpTests\bin\Debug\System.Net.Http.dll
-C:\Projects\RetailrsInfo\yelpTests\bin\Debug\Yelp.Api.dll
 C:\Projects\RetailrsInfo\yelpTests\bin\Debug\Refit.dll
 C:\Projects\RetailrsInfo\yelpTests\bin\Debug\yelp.pdb
 C:\Projects\RetailrsInfo\yelpTests\bin\Debug\yelp.exe.config

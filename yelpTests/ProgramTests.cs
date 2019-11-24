@@ -24,5 +24,13 @@ namespace yelp.Tests
             Program.GetSocialFromWebSite("partytime-rentals.com", out string fb, out string instagram,
                 out List<string> emailList, out string linkedin, out string twitter, out string phone);
         }
+
+        [TestMethod()]
+        public void RunTest()
+        {
+            List<string> locations = new List<string> { "New York, NY"};
+            List<string> categories = new List<string> { "partysupplies" };
+            Program.Run(locations, categories);
+        }
     }
 }

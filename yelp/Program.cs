@@ -32,17 +32,20 @@ namespace yelp
 
         static void Main(string[] args)
         {
-            //Test();
+            List<string> locations = GetLocations();
+            List<string> categories = GetCategories();
 
+            Run(locations, categories);
+        }
+
+        public static void Run(List<string> locations, List<string> categories)
+        {
             string yelp_api_key = ConfigurationManager.AppSettings.Get("yelp_api_key");
             var yelpClient = new Yelp.Api.Client(yelp_api_key);
             Database db = new Database();
             DomainFinder df = new DomainFinder();
             Dictionary<string, List<EmailDetails>> domainsEmails = new Dictionary<string, List<EmailDetails>>();
 
-
-            List<string> locations = GetLocations();
-            List<string> categories = GetCategories();
             List<Details> details = new List<Details>();
             foreach (string location in locations)
             {
@@ -67,6 +70,9 @@ namespace yelp
                                     {
                                         try
                                         {
+                                            if (db.IsStoreExists(business.Name, business.Location.City, business.Location.State))
+                                                continue;
+
                                             List<GoogleStoreModel> googleStores = new List<GoogleStoreModel>();
 
                                             List<string> placeIdsByPhone = df.GetPlaceIdsByPhone(business.Phone);
@@ -111,18 +117,20 @@ namespace yelp
                                                     GetSocialFromWebSite(domain, out string fb, out string instagram, out List<string> emailsList,
                                                         out string linkedin, out string twitter, out string phone);
 
-                                                    List<EmailDetails> emails = GetDomainEmailsFromDB(domain, googleStore.Name, db);
-                                                    int numOfEMailsFromHunter = emails?.Count ?? 0;
-                                                    if (emails == null || emails.Count == 0)
-                                                    {
-                                                        (emails, numOfEMailsFromHunter) = GetEmailsFromHunter(domain, googleStore.Name);
-                                                    }
+                                                    googleStore.Facebook = fb;
+                                                    googleStore.Instagram = instagram;
+                                                    googleStore.Linkedin = linkedin;
+                                                    googleStore.Twitter = twitter;
+
+                                                    List<EmailDetails> emails = new List<EmailDetails>();
+                                                    int numOfEMailsFromHunter = 0;
+                                                    (emails, numOfEMailsFromHunter) = GetEmailsFromHunter(domain, googleStore.Name);
 
                                                     emails = emails.Where(email => IsEmailGood(email.Email)).ToList();
 
                                                     if (numOfEMailsFromHunter >= _numOfEmailsForChain)
                                                     {
-                                                        InsertYelpAndGoogleDataToDB(domain, fb, instagram, linkedin, twitter,  business, 
+                                                        InsertYelpAndGoogleDataToDB(domain, fb, instagram, linkedin, twitter, business,
                                                             StringConstants.CATEGORY_CHAIN, StringConstants.STATUS_GOOD, phone, db);
                                                     }
                                                     else
@@ -160,11 +168,10 @@ namespace yelp
                 { _logger.Error(x, ""); }
             }
             _logger.Info("FINISH");
-
         }
 
         private static void InsertYelpAndGoogleDataToDB(string domain, string fb, string instagram, string linkedin, string twitter,
-            BusinessResponse business, string category, string status,string phone, Database db)
+            BusinessResponse business, string category, string status, string phone, Database db)
         {
             AddRecordToDb(new yelp.Details
             {
@@ -190,11 +197,12 @@ namespace yelp
                 Address1 = business.Location.Address1,
                 Address2 = business.Location.Address2,
                 ZipCode = business.Location.ZipCode,
-                InfoQuality = status
+                InfoQuality = status,
+                YelpUrl = business.Url
             }, db);
         }
 
-        private static void InsertYelpGoogleAndHunterDataToDB(BusinessResponse business, GoogleStoreModel googleStore, 
+        private static void InsertYelpGoogleAndHunterDataToDB(BusinessResponse business, GoogleStoreModel googleStore,
             List<EmailDetails> emails, string category, string status, Database db)
         {
             foreach (var email in emails)
@@ -207,18 +215,18 @@ namespace yelp
                     FirstName = email.FirstName,
                     LastName = email.LastName,
                     Position = email.Position,
-                    LinkedIn = email.LinkedIn,
-                    Twitter = email.Twitter,
+                    LinkedIn = googleStore.Linkedin,
+                    Twitter = googleStore.Twitter,
                     Seniority = email.Seniority,
                     City = business.Location.City,
                     State = business.Location.State,
                     Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
                     StoreName = business.Name,
                     Phone = business.Phone,
-                    Facebook = null,
+                    Facebook = googleStore.Facebook,
                     Rating = business.Rating,
                     Reviewers = business.ReviewCount,
-                    Instagram = null,
+                    Instagram = googleStore.Instagram,
                     Departmnt = email.Departmnt,
                     RetailsType = category,
                     Address1 = business.Location.Address1,
@@ -231,7 +239,7 @@ namespace yelp
 
         private static void InsertGoogleHunterDataToDB(BusinessResponse business, GoogleStoreModel googleStore, List<EmailDetails> emails, string status, Database db)
         {
-            foreach(var email in emails)
+            foreach (var email in emails)
             {
                 AddRecordToDb(new yelp.Details
                 {
@@ -241,18 +249,18 @@ namespace yelp
                     FirstName = email.FirstName,
                     LastName = email.LastName,
                     Position = email.Position,
-                    LinkedIn = email.LinkedIn,
-                    Twitter = email.Twitter,
+                    LinkedIn = googleStore.Linkedin,
+                    Twitter = googleStore.Twitter,
                     Seniority = email.Seniority,
                     City = business.Location.City,
                     State = business.Location.State,
                     Category = string.Join(", ", business.Categories.Select(c => c.Title).ToList<string>()),
                     StoreName = googleStore.Name,
                     Phone = googleStore.Phone,
-                    Facebook = null,
+                    Facebook = googleStore.Facebook,
                     Rating = -1,
                     Reviewers = -1,
-                    Instagram = null,
+                    Instagram = googleStore.Instagram,
                     Departmnt = email.Departmnt,
                     RetailsType = (emails?.Count ?? 0) >= _numOfEmailsForChain ? StringConstants.CATEGORY_CHAIN : StringConstants.CATEGORY_STORE,
                     Address1 = business.Location.Address1,
@@ -302,7 +310,7 @@ namespace yelp
                 o = JObject.Parse(responseBody);
                 var hunter_emails_comp = o["data"]["emails"];
                 emails = CreateEmailListFromHunter(hunter_emails_comp);
-                
+
             }
             int numOfEmails = int.Parse(o["meta"]["results"]?.Value<string>());
             return (emails, numOfEmails);
@@ -310,7 +318,7 @@ namespace yelp
 
         private static bool IsWebsiteWorking(string website)
         {
-            if (website == null)
+            if (string.IsNullOrEmpty(website))
                 return false;
             using (var client = new HttpClient())
             {
@@ -337,18 +345,17 @@ namespace yelp
 
         private static bool ArePhonesTheSame(string phone1, string phone2)
         {
-            string p1 = phone1;
-            if(p1.Length > 10)
+            string p1 = phone1?.Replace("+", "")?.Replace("-", "")?.Replace("(", "")?.Replace(")", "")?.Replace(" ", "")?.Trim() ?? "";
+            if (p1.Length > 10)
             {
-                p1 = phone1.Substring(phone1.Length - 10, phone1.Length);
+                p1 = p1.Substring(p1.Length - 10);
             }
-            string p2 = phone2;
+            string p2 = phone2?.Replace("+", "")?.Replace("-", "")?.Replace("(", "")?.Replace(")", "")?.Replace(" ", "")?.Trim() ?? "";
             if (p2.Length > 10)
             {
-                p2 = phone2.Substring(phone2.Length - 10, phone2.Length);
+                p2 = p2.Substring(p2.Length - 10);
             }
-            return ((p1?.Replace("+", "")?.Replace("-", "")?.Replace("(", "")?.Replace(")", "")?.Replace(" ", "")?.Trim() ?? "")
-                     == (p2?.Replace("+", "")?.Replace("-", "")?.Replace("(", "")?.Replace(")", "")?.Replace(" ", "")?.Trim() ?? "z"));
+            return p1 == p2;
         }
 
         private static void InsertYelpDataToDB(BusinessResponse business, string status, Database db)
@@ -377,7 +384,8 @@ namespace yelp
                 Address1 = business.Location.Address1,
                 Address2 = business.Location.Address2,
                 ZipCode = business.Location.ZipCode,
-                InfoQuality = status
+                InfoQuality = status,
+                YelpUrl = business.Url
             }, db);
         }
 
@@ -874,68 +882,68 @@ namespace yelp
         private static List<string> GetLocations()
         {
             return new List<string> {
-"Albany, NY",
-"Amsterdam, NY",
-"Auburn, NY",
-"Batavia, NY",
-"Beacon, NY",
-"Binghamton, NY",
-"Buffalo, NY",
-"Canandaigua, NY",
-"Cohoes, NY",
-"Corning, NY",
-"Cortland, NY",
-"Dunkirk, NY",
-"Elmira, NY",
-"Fulton, NY",
-"Geneva, NY",
-"Glen Cove, NY",
-"Glens Falls, NY",
-"Gloversville, NY",
-"Hornell, NY",
-"Hudson, NY",
-"Ithaca, NY",
-"Jamestown, NY",
-"Johnstown, NY",
-"Kingston, NY",
-"Lackawanna, NY",
-"Little Falls, NY",
-"Lockport, NY",
-"Long Beach, NY",
-"Mechanicville, NY",
-"Middletown, NY",
-"Mount Vernon, NY",
-"New Rochelle, NY",
-"New York, NY",
-"Newburgh, NY",
-"Niagara Falls, NY",
-"North Tonawanda, NY",
-"Norwich, NY",
-"Ogdensburg, NY",
-"Olean, NY",
-"Oneida, NY",
-"Oneonta, NY",
-"Oswego, NY",
-"Peekskill, NY",
-"Plattsburgh, NY",
-"Port Jervis, NY",
-"Poughkeepsie, NY",
-"Rensselaer, NY",
-"Rochester, NY",
-"Rome, NY",
-"Rye, NY",
-"Salamanca, NY",
-"Saratoga Springs, NY",
-"Schenectady, NY",
-"Sherrill, NY",
-"Syracuse, NY",
-"Tonawanda, NY",
-"Troy, NY",
-"Utica, NY",
-"Watertown, NY",
-"Watervliet, NY",
-"White Plains, NY",
-"Yonkers, NY"
+//"Albany, NY",
+//"Amsterdam, NY",
+//"Auburn, NY",
+//"Batavia, NY",
+//"Beacon, NY",
+//"Binghamton, NY",
+//"Buffalo, NY",
+//"Canandaigua, NY",
+//"Cohoes, NY",
+//"Corning, NY",
+//"Cortland, NY",
+//"Dunkirk, NY",
+//"Elmira, NY",
+//"Fulton, NY",
+//"Geneva, NY",
+//"Glen Cove, NY",
+//"Glens Falls, NY",
+//"Gloversville, NY",
+//"Hornell, NY",
+//"Hudson, NY",
+//"Ithaca, NY",
+//"Jamestown, NY",
+//"Johnstown, NY",
+//"Kingston, NY",
+//"Lackawanna, NY",
+//"Little Falls, NY",
+//"Lockport, NY",
+//"Long Beach, NY",
+//"Mechanicville, NY",
+//"Middletown, NY",
+//"Mount Vernon, NY",
+//"New Rochelle, NY",
+"New York, NY"
+//"Newburgh, NY",
+//"Niagara Falls, NY",
+//"North Tonawanda, NY",
+//"Norwich, NY",
+//"Ogdensburg, NY",
+//"Olean, NY",
+//"Oneida, NY",
+//"Oneonta, NY",
+//"Oswego, NY",
+//"Peekskill, NY",
+//"Plattsburgh, NY",
+//"Port Jervis, NY",
+//"Poughkeepsie, NY",
+//"Rensselaer, NY",
+//"Rochester, NY",
+//"Rome, NY",
+//"Rye, NY",
+//"Salamanca, NY",
+//"Saratoga Springs, NY",
+//"Schenectady, NY",
+//"Sherrill, NY",
+//"Syracuse, NY",
+//"Tonawanda, NY",
+//"Troy, NY",
+//"Utica, NY",
+//"Watertown, NY",
+//"Watervliet, NY",
+//"White Plains, NY",
+//"Yonkers, NY"
 };
         }
 

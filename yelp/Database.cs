@@ -82,6 +82,22 @@ namespace yelp
             return domains;
         }
 
+        internal bool IsStoreExists(string name, string city, string state)
+        {
+            string query = "select count(*) from Stores where StoreName = @name and City = @city and State = @state";
+            SQLiteCommand cmd = new SQLiteCommand(query, _conn);
+            OpenConnection();
+            cmd.CommandType = CommandType.Text;
+            cmd.Parameters.Add(new SQLiteParameter("@city", city));
+            cmd.Parameters.Add(new SQLiteParameter("@name", name));
+            cmd.Parameters.Add(new SQLiteParameter("@state", state));
+             object rows = cmd.ExecuteScalar();
+            CloseConnection();
+            if (!int.TryParse(rows.ToString(), out int intRow))
+                return false;
+            return intRow > 0;
+        }
+
         public void UpdateSocial(string domain, string fb, string instagram, string email, string linkedin, string twitter)
         {
             if (!string.IsNullOrEmpty(fb))
